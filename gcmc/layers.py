@@ -126,7 +126,7 @@ class Dense(Layer):
         x_v = tf.nn.dropout(x_v, 1 - self.dropout)
         x_v = tf.matmul(x_v, self.vars['weights_v'])
 
-        u_outputs = self.act(x_u)
+        u_outputs = self.act(x_u) #activation
         v_outputs = self.act(x_v)
 
         if self.bias:
@@ -140,14 +140,14 @@ class Dense(Layer):
             if self.logging:
                 tf.summary.histogram(self.name + '/inputs_u', inputs[0])
                 tf.summary.histogram(self.name + '/inputs_v', inputs[1])
-            outputs_u, outputs_v = self._call(inputs)
+            outputs_u, outputs_v = self._call(inputs) #!
             if self.logging:
                 tf.summary.histogram(self.name + '/outputs_u', outputs_u)
                 tf.summary.histogram(self.name + '/outputs_v', outputs_v)
             return outputs_u, outputs_v
 
 
-class StackGCN(Layer):
+class StackGCN(Layer): # accum resorts to stack
     """Graph convolution layer for bipartite graphs and sparse inputs."""
 
     def __init__(self, input_dim, output_dim, support, support_t, num_support, u_features_nonzero=None,
@@ -171,14 +171,14 @@ class StackGCN(Layer):
 
         self.dropout = dropout
 
-        self.sparse_inputs = sparse_inputs
+        self.sparse_inputs = sparse_inputs #sparse or cold start
         self.u_features_nonzero = u_features_nonzero
         self.v_features_nonzero = v_features_nonzero
         if sparse_inputs:
             assert u_features_nonzero is not None and v_features_nonzero is not None, \
                 'u_features_nonzero and v_features_nonzero can not be None when sparse_inputs is True'
 
-        self.support = tf.sparse_split(axis=1, num_split=num_support, sp_input=support)
+        self.support = tf.sparse_split(axis=1, num_split=num_support, sp_input=support) # support of rating levels
         self.support_transpose = tf.sparse_split(axis=1, num_split=num_support, sp_input=support_t)
 
         self.act = act
@@ -200,14 +200,14 @@ class StackGCN(Layer):
         supports_u = []
         supports_v = []
 
-        for i in range(len(self.support)):
+        for i in range(len(self.support)): # Equation 8
             tmp_u = dot(x_u, self.weights_u[i], sparse=self.sparse_inputs)
             tmp_v = dot(x_v, self.weights_v[i], sparse=self.sparse_inputs)
 
             support = self.support[i]
             support_transpose = self.support_transpose[i]
 
-            supports_u.append(tf.sparse_tensor_dense_matmul(support, tmp_v))
+            supports_u.append(tf.sparse_tensor_dense_matmul(support, tmp_v)) # what about normalization D_inverse in Eq 8?
             supports_v.append(tf.sparse_tensor_dense_matmul(support_transpose, tmp_u))
 
         z_u = tf.concat(axis=1, values=supports_u)
@@ -230,7 +230,7 @@ class StackGCN(Layer):
             return outputs_u, outputs_v
 
 
-class OrdinalMixtureGCN(Layer):
+class OrdinalMixtureGCN(Layer): # Section 2.7 Weight sharing
 
     """Graph convolution layer for bipartite graphs and sparse inputs."""
 
@@ -301,7 +301,7 @@ class OrdinalMixtureGCN(Layer):
         self.support_nnz = []
         self.support_transpose_nnz = []
         for i in range(len(self.support)):
-            nnz = tf.reduce_sum(tf.shape(self.support[i].values))
+            nnz = tf.reduce_sum(tf.shape(self.support[i].values)) # What is nnz?
             self.support_nnz.append(nnz)
             self.support_transpose_nnz.append(nnz)
 
