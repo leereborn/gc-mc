@@ -178,7 +178,7 @@ class StackGCN(Layer): # accum resorts to stack
             assert u_features_nonzero is not None and v_features_nonzero is not None, \
                 'u_features_nonzero and v_features_nonzero can not be None when sparse_inputs is True'
 
-        self.support = tf.sparse_split(axis=1, num_split=num_support, sp_input=support) # support of rating levels
+        self.support = tf.sparse_split(axis=1, num_split=num_support, sp_input=support) # support of rating levels. Support has been normalized in the global normalization section in trian.py.
         self.support_transpose = tf.sparse_split(axis=1, num_split=num_support, sp_input=support_t)
 
         self.act = act
@@ -210,7 +210,7 @@ class StackGCN(Layer): # accum resorts to stack
             supports_u.append(tf.sparse_tensor_dense_matmul(support, tmp_v)) # what about normalization D_inverse in Eq 8?
             supports_v.append(tf.sparse_tensor_dense_matmul(support_transpose, tmp_u))
 
-        z_u = tf.concat(axis=1, values=supports_u)
+        z_u = tf.concat(axis=1, values=supports_u) # The summation in Eq. 8 is replaced by concatenation.
         z_v = tf.concat(axis=1, values=supports_v)
 
         u_outputs = self.act(z_u)
@@ -421,7 +421,7 @@ class BilinearMixture(Layer):
         u_inputs = tf.nn.dropout(inputs[0], 1 - self.dropout)
         v_inputs = tf.nn.dropout(inputs[1], 1 - self.dropout)
 
-        u_inputs = tf.gather(u_inputs, self.u_indices)
+        u_inputs = tf.gather(u_inputs, self.u_indices) # u_indices?
         v_inputs = tf.gather(v_inputs, self.v_indices)
 
         if self.user_item_bias:
@@ -448,7 +448,7 @@ class BilinearMixture(Layer):
             outputs += u_bias
             outputs += v_bias
 
-        outputs = self.act(outputs)
+        outputs = self.act(outputs) # Why no activation for decoder in paper?
 
         return outputs
 
