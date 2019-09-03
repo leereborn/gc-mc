@@ -164,6 +164,7 @@ class RecommenderGAE(Model):
                                                  self_connections=False))
 
         elif self.accum == 'stack':
+            '''
             self.layers.append(StackGCN(input_dim=self.input_dim,
                                         output_dim=self.hidden[0],
                                         support=self.support,
@@ -176,6 +177,20 @@ class RecommenderGAE(Model):
                                         dropout=self.dropout,
                                         logging=self.logging,
                                         share_user_item_weights=True))
+            '''
+            self.layers.append(AttentionalStackGCN(input_dim=self.input_dim,
+                                        output_dim=self.hidden[0],
+                                        support=self.support,
+                                        support_t=self.support_t,
+                                        num_support=self.num_support,
+                                        u_features_nonzero=self.u_features_nonzero,
+                                        v_features_nonzero=self.v_features_nonzero,
+                                        sparse_inputs=True,
+                                        act=tf.nn.relu,
+                                        dropout=self.dropout,
+                                        logging=self.logging,
+                                        share_user_item_weights=True))
+
         else:
             raise ValueError('accumulation function option invalid, can only be stack or sum.')
 
