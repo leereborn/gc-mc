@@ -229,6 +229,103 @@ class StackGCN(Layer): # accum resorts to stack
                 tf.summary.histogram(self.name + '/outputs_v', outputs_v)
             return outputs_u, outputs_v
 
+class AttentionalStackGCN(Layer):
+    """Graph convolution layer for bipartite graphs and sparse inputs."""
+
+    def __init__(self, input_dim, output_dim, support, support_t, num_support, u_features_nonzero=None,
+                 v_features_nonzero=None, sparse_inputs=False, dropout=0.,
+                 act=tf.nn.relu, share_user_item_weights=True,  attn_kernel, **kwargs):
+        super(StackGCN, self).__init__(**kwargs)
+
+        assert output_dim % num_support == 0, 'output_dim must be multiple of num_support for stackGC layer'
+
+        with tf.variable_scope(self.name + '_vars'):
+            self.vars['weights_u'] = weight_variable_random_uniform(input_dim, output_dim, name='weights_u')
+
+            if not share_user_item_weights:
+                self.vars['weights_v'] = weight_variable_random_uniform(input_dim, output_dim, name='weights_v')
+
+            else:
+                self.vars['weights_v'] = self.vars['weights_u']
+
+        self.weights_u = tf.split(value=self.vars['weights_u'], axis=1, num_or_size_splits=num_support)
+        self.weights_v = tf.split(value=self.vars['weights_v'], axis=1, num_or_size_splits=num_support)
+
+        self.dropout = dropout
+
+        self.sparse_inputs = sparse_inputs #sparse or cold start
+        self.u_features_nonzero = u_features_nonzero
+        self.v_features_nonzero = v_features_nonzero
+        if sparse_inputs:
+            assert u_features_nonzero is not None and v_features_nonzero is not None, \
+                'u_features_nonzero and v_features_nonzero can not be None when sparse_inputs is True'
+
+        self.support = tf.sparse_split(axis=1, num_split=num_support, sp_input=support) # support of rating levels. Support has been normalized in the global normalization section in trian.py.
+        self.support_transpose = tf.sparse_split(axis=1, num_split=num_support, sp_input=support_t)
+
+        self.act = act
+
+        self.attn_kernel = attn_kernel
+
+        if self.logging:
+            self._log_vars()
+
+    def _call(self, inputs):
+        x_u = inputs[0]
+        x_v = inputs[1]
+
+        if self.sparse_inputs:
+            x_u = dropout_sparse(x_u, 1 - self.dropout, self.u_features_nonzero)
+            x_v = dropout_sparse(x_v, 1 - self.dropout, self.v_features_nonzero)
+        else:
+            x_u = tf.nn.dropout(x_u, 1 - self.dropout)
+            x_v = tf.nn.dropout(x_v, 1 - self.dropout)
+
+        supports_u = []
+        supports_v = []
+
+        for i in range(len(self.support)): # Equation 8
+            tmp_u = dot(x_u, self.weights_u[i], sparse=self.sparse_inputs)
+            tmp_v = dot(x_v, self.weights_v[i], sparse=self.sparse_inputs)
+
+            support = self.support[i]
+            support_transpose = self.support_transpose[i]
+
+            attn_for_self_u = dot(tmp_u,self.attn_kernel[0]) # assume attention kernel is shared between u and v
+            attn_for_self_v = dot(tmp_v,self.attn_kernel[0])
+            attn_for_neighs_u = dot(tmp_u,self.attn_kernel[1])
+            attn_for_neighs_v = dot(tmp_v,self.attn_kernel[1])
+
+            attn_coef_u = attn_for_self_u + tf.transpose(attn_for_neighs_u)
+            attn_coef_u_t = tf.transpose(attn_coef_u)
+            attn_coef_v = attn_for_self_v + tf.transpose(attn_for_neighs_v)
+
+            mask_supp = -10e9 * (1.0 - support)
+            attn_coef_v += mask_supp
+            mask_supp_t = -10e9 * (1.0 - support_transpose)
+            attn_coef_u_t += mask_supp_t
+
+            supports_u.append(tf.sparse_tensor_dense_matmul(attn_coef_v, tmp_v))
+            supports_v.append(tf.sparse_tensor_dense_matmul(attn_coef_u_t, tmp_u))
+
+        z_u = tf.concat(axis=1, values=supports_u) # The summation in Eq. 8 is replaced by concatenation.
+        z_v = tf.concat(axis=1, values=supports_v)
+
+        u_outputs = self.act(z_u)
+        v_outputs = self.act(z_v)
+
+        return u_outputs, v_outputs
+
+    def __call__(self, inputs):
+        with tf.name_scope(self.name):
+            if self.logging and not self.sparse_inputs:
+                tf.summary.histogram(self.name + '/inputs_u', inputs[0])
+                tf.summary.histogram(self.name + '/inputs_v', inputs[1])
+            outputs_u, outputs_v = self._call(inputs)
+            if self.logging:
+                tf.summary.histogram(self.name + '/outputs_u', outputs_u)
+                tf.summary.histogram(self.name + '/outputs_v', outputs_v)
+            return outputs_u, outputs_v
 
 class OrdinalMixtureGCN(Layer): # Section 2.7 Weight sharing
 
