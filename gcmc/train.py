@@ -215,7 +215,7 @@ for i in range(NUMCLASSES):
     support.append(support_unnormalized)
     support_t.append(support_unnormalized_transpose)
 
-
+# normalization!!
 support = globally_normalize_bipartite_adjacency(support, symmetric=SYM)
 support_t = globally_normalize_bipartite_adjacency(support_t, symmetric=SYM)
 
