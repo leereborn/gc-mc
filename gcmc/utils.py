@@ -1,10 +1,11 @@
 from __future__ import division
 from __future__ import print_function
+import numpy as np
 
 
 def construct_feed_dict(placeholders, u_features, v_features, u_features_nonzero, v_features_nonzero,
                         support, support_t, labels, u_indices, v_indices, class_values,
-                        dropout, u_features_side=None, v_features_side=None):
+                        dropout, list_u, list_v, u_features_side=None, v_features_side=None):
     """
     Function that creates feed dictionary when running tensorflow sessions.
     """
@@ -23,6 +24,9 @@ def construct_feed_dict(placeholders, u_features, v_features, u_features_nonzero
 
     feed_dict.update({placeholders['dropout']: dropout})
     feed_dict.update({placeholders['class_values']: class_values})
+
+    feed_dict.update({placeholders['list_u']: list_u})
+    feed_dict.update({placeholders['list_v']: list_v})
 
     if (u_features_side is not None) and (v_features_side is not None):
         feed_dict.update({placeholders['u_features_side']: u_features_side})

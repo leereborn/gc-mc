@@ -106,6 +106,9 @@ class RecommenderGAE(Model):
         self.v_indices = placeholders['item_indices']
         self.class_values = placeholders['class_values']
 
+        self.list_u = placeholders['list_u']
+        self.list_v = placeholders['list_v']
+
         self.hidden = hidden
         self.num_basis_functions = num_basis_functions
         self.num_classes = num_classes
@@ -178,7 +181,7 @@ class RecommenderGAE(Model):
                                         logging=self.logging,
                                         share_user_item_weights=True))
             '''
-            self.layers.append(AttentionalStackGCN(input_dim=self.input_dim,
+            self.layers.append(AttentionalStackGCN(list_u=self.list_u, list_v=self.list_v, input_dim=self.input_dim,
                                         output_dim=self.hidden[0],
                                         support=self.support,
                                         support_t=self.support_t,

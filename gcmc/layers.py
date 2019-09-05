@@ -232,16 +232,20 @@ class StackGCN(Layer): # accum resorts to stack
 class AttentionalStackGCN(Layer):
     """Graph convolution layer for bipartite graphs and sparse inputs."""
 
-    def __init__(self, input_dim, output_dim, support, support_t, num_support, u_features_nonzero=None,
+    def __init__(self, list_u, list_v,input_dim, output_dim, support, support_t, num_support, u_features_nonzero=None,
                  v_features_nonzero=None, sparse_inputs=False, dropout=0.,
-                 act=tf.nn.relu, share_user_item_weights=True,  attn_kernel, **kwargs):
-        super(StackGCN, self).__init__(**kwargs)
+                 act=tf.nn.relu, share_user_item_weights=True, **kwargs):
+        super(AttentionalStackGCN, self).__init__(**kwargs) #?
 
         assert output_dim % num_support == 0, 'output_dim must be multiple of num_support for stackGC layer'
 
+        print(input_dim,output_dim)
         with tf.variable_scope(self.name + '_vars'):
             self.vars['weights_u'] = weight_variable_random_uniform(input_dim, output_dim, name='weights_u')
-
+            self.vars['attn_weights']=[]
+            self.vars['attn_weights'].append(tf.random.uniform(shape=[output_dim/num_support,1])) #try weight_variable_random_uniform?
+            self.vars['attn_weights'].append(tf.random.uniform(shape=[output_dim/num_support,1])) # Use output dim because since the features are transformed to the output_dim.
+            #self.vars['attn_coefs_v'] = tf.random.uniform(shape=[input_dim,1])
             if not share_user_item_weights:
                 self.vars['weights_v'] = weight_variable_random_uniform(input_dim, output_dim, name='weights_v')
 
@@ -265,15 +269,18 @@ class AttentionalStackGCN(Layer):
 
         self.act = act
 
-        self.attn_kernel = attn_kernel
-
+        self.list_u=list_u
+        self.list_v=list_v
+        
         if self.logging:
             self._log_vars()
 
     def _call(self, inputs):
         x_u = inputs[0]
         x_v = inputs[1]
-
+        #print(x_u.shape)
+        #print(x_v.shape)
+        #import pdb;pdb.set_trace()
         if self.sparse_inputs:
             x_u = dropout_sparse(x_u, 1 - self.dropout, self.u_features_nonzero)
             x_v = dropout_sparse(x_v, 1 - self.dropout, self.v_features_nonzero)
@@ -291,22 +298,32 @@ class AttentionalStackGCN(Layer):
             support = self.support[i]
             support_transpose = self.support_transpose[i]
 
-            attn_for_self_u = dot(tmp_u,self.attn_kernel[0]) # assume attention kernel is shared between u and v
-            attn_for_self_v = dot(tmp_v,self.attn_kernel[0])
-            attn_for_neighs_u = dot(tmp_u,self.attn_kernel[1])
-            attn_for_neighs_v = dot(tmp_v,self.attn_kernel[1])
+            attn_for_self_u = dot(tmp_u,self.vars['attn_weights'][0]) # assume attention kernel is shared between u and v
+            attn_for_self_v = dot(tmp_v,self.vars['attn_weights'][0])
+            attn_for_neighs_u = dot(tmp_v,self.vars['attn_weights'][1])
+            attn_for_neighs_v = dot(tmp_u,self.vars['attn_weights'][1])
 
-            attn_coef_u = attn_for_self_u + tf.transpose(attn_for_neighs_u)
-            attn_coef_u_t = tf.transpose(attn_coef_u)
-            attn_coef_v = attn_for_self_v + tf.transpose(attn_for_neighs_v)
+            attn_coef_u = attn_for_self_u + tf.transpose(attn_for_neighs_u) #(943, 1682)
+            attn_coef_u = tf.gather(attn_coef_u,self.list_u)
+            attn_coef_v = attn_for_self_v + tf.transpose(attn_for_neighs_v) #(1682, 943)
+            attn_coef_v = tf.gather(attn_coef_v,self.list_v)
+            
+            sparse_supp = tf.sparse.reorder(support)
+            sparse_supp_t = tf.sparse.reorder(support_transpose)
+            dense_supp = tf.sparse.to_dense(sparse_supp)
+            dense_supp_t = tf.sparse.to_dense(sparse_supp_t)
 
-            mask_supp = -10e9 * (1.0 - support)
-            attn_coef_v += mask_supp
-            mask_supp_t = -10e9 * (1.0 - support_transpose)
-            attn_coef_u_t += mask_supp_t
+            mask_supp = -10e9 * (1.0 - dense_supp)
+            attn_coef_u += mask_supp
+            mask_supp_t = -10e9 * (1.0 - dense_supp_t)
+            attn_coef_v += mask_supp_t
 
-            supports_u.append(tf.sparse_tensor_dense_matmul(attn_coef_v, tmp_v))
-            supports_v.append(tf.sparse_tensor_dense_matmul(attn_coef_u_t, tmp_u))
+            #print(attn_coef_u.shape)
+            #print(attn_coef_v.shape)
+            #import pdb;pdb.set_trace()
+
+            supports_u.append(tf.linalg.matmul(attn_coef_u, tmp_v))
+            supports_v.append(tf.linalg.matmul(attn_coef_v, tmp_u))
 
         z_u = tf.concat(axis=1, values=supports_u) # The summation in Eq. 8 is replaced by concatenation.
         z_v = tf.concat(axis=1, values=supports_v)

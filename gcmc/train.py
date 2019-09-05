@@ -19,6 +19,7 @@ from preprocessing import create_trainvaltest_split, \
 from model import RecommenderGAE, RecommenderSideInfoGAE
 from utils import construct_feed_dict
 
+#tf.enable_eager_execution()
 # Set random seed
 # seed = 123 # use only for unit testing
 seed = int(time.time())
@@ -214,17 +215,19 @@ for i in range(NUMCLASSES):
     support_unnormalized_transpose = support_unnormalized.T
     support.append(support_unnormalized)
     support_t.append(support_unnormalized_transpose)
+    #print(support_unnormalized_transpose.shape)
+    #import pdb;pdb.set_trace()
 
 # normalization!!
-support = globally_normalize_bipartite_adjacency(support, symmetric=SYM)
-support_t = globally_normalize_bipartite_adjacency(support_t, symmetric=SYM)
+#support = globally_normalize_bipartite_adjacency(support, symmetric=SYM)
+#support_t = globally_normalize_bipartite_adjacency(support_t, symmetric=SYM)
 
-if SELFCONNECTIONS:
+if SELFCONNECTIONS: #default false
     support.append(sp.identity(u_features.shape[0], format='csr'))
     support_t.append(sp.identity(v_features.shape[0], format='csr'))
 
 num_support = len(support)
-support = sp.hstack(support, format='csr')
+support = sp.hstack(support, format='csr')# horizontally stack
 support_t = sp.hstack(support_t, format='csr')
 
 if ACCUM == 'stack':
@@ -259,7 +262,7 @@ val_support = support[np.array(val_u)]
 val_support_t = support_t[np.array(val_v)]
 
 # Collect all user and item nodes for train set
-train_u = list(set(train_u_indices))
+train_u = list(set(train_u_indices)) #remove duplicates
 train_v = list(set(train_v_indices))
 train_u_dict = {n: i for i, n in enumerate(train_u)}
 train_v_dict = {n: i for i, n in enumerate(train_v)}
@@ -270,6 +273,8 @@ train_v_indices = np.array([train_v_dict[o] for o in train_v_indices])
 train_support = support[np.array(train_u)]
 train_support_t = support_t[np.array(train_v)]
 
+#print(train_support_t.shape)#(1650, 4715)
+#import pdb;pdb.set_trace()
 # features as side info
 if FEATURES:
     test_u_features_side = u_features_side[np.array(test_u)]
@@ -311,6 +316,9 @@ placeholders = {
 
     'support': tf.sparse_placeholder(tf.float32, shape=(None, None)),
     'support_t': tf.sparse_placeholder(tf.float32, shape=(None, None)),
+
+    'list_u':tf.placeholder(tf.int32, shape=(None)),
+    'list_v':tf.placeholder(tf.int32, shape=(None))
 }
 
 # create model
@@ -364,17 +372,17 @@ v_features_nonzero = v_features[1].shape[0]
 # Feed_dicts for validation and test set stay constant over different update steps
 train_feed_dict = construct_feed_dict(placeholders, u_features, v_features, u_features_nonzero,
                                       v_features_nonzero, train_support, train_support_t,
-                                      train_labels, train_u_indices, train_v_indices, class_values, DO,
+                                      train_labels, train_u_indices, train_v_indices, class_values, DO, train_u, train_v,
                                       train_u_features_side, train_v_features_side)
 # No dropout for validation and test runs
 val_feed_dict = construct_feed_dict(placeholders, u_features, v_features, u_features_nonzero,
                                     v_features_nonzero, val_support, val_support_t,
-                                    val_labels, val_u_indices, val_v_indices, class_values, 0.,
+                                    val_labels, val_u_indices, val_v_indices, class_values, 0., val_u, val_v,
                                     val_u_features_side, val_v_features_side)
 
 test_feed_dict = construct_feed_dict(placeholders, u_features, v_features, u_features_nonzero,
                                      v_features_nonzero, test_support, test_support_t,
-                                     test_labels, test_u_indices, test_v_indices, class_values, 0.,
+                                     test_labels, test_u_indices, test_v_indices, class_values, 0., test_u, test_v,
                                      test_u_features_side, test_v_features_side)
 
 
