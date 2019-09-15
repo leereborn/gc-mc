@@ -138,7 +138,10 @@ class RecommenderGAE(Model):
 
     def _loss(self):
         self.loss += softmax_cross_entropy(self.outputs, self.labels)
-
+        # regularization
+        #reg_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
+        #print(tf.reduce_sum(reg_losses))
+        #self.loss += tf.reduce_sum(reg_losses) # weather to add regualrization
         tf.summary.scalar('loss', self.loss)
 
     def _accuracy(self):
@@ -359,7 +362,7 @@ class RecommenderSideInfoGAE(Model):
 
         # gcn layer
         layer = self.layers[0]
-        gcn_hidden = layer(self.inputs)
+        gcn_hidden = layer(self.inputs) # where the __call__ gets called.
 
         # dense layer for features
         layer = self.layers[1]

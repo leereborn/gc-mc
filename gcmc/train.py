@@ -388,8 +388,8 @@ test_feed_dict = construct_feed_dict(placeholders, u_features, v_features, u_fea
 
 # Collect all variables to be logged into summary
 merged_summary = tf.summary.merge_all()
-config = tf.ConfigProto(device_count = {'GPU': 0,'CPU':2})
-#config = tf.ConfigProto()
+#config = tf.ConfigProto(device_count = {'GPU': 0})
+config = tf.ConfigProto()
 sess = tf.Session(config=config)
 sess.run(tf.global_variables_initializer())
 
