@@ -333,6 +333,10 @@ class AttentionalStackGCN(Layer):
             attn_coef_u = tf.nn.softmax(attn_coef_u)
             attn_coef_v = tf.nn.softmax(attn_coef_v)
 
+            # Apply dropout
+            attn_coef_u = tf.nn.dropout(attn_coef_u,rate=0.6)
+            attn_coef_v = tf.nn.dropout(attn_coef_v,rate=0.6)
+
             #print(attn_coef_u.shape)
             #print(attn_coef_v.shape)
             #import pdb;pdb.set_trace()
