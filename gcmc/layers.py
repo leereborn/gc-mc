@@ -245,9 +245,7 @@ class AttentionalStackGCN(Layer):
             self.vars['attn_weights']=[]
             attn1 = tf.get_variable(name='attn_self',shape=(output_dim/num_support,1),initializer=tf.glorot_uniform_initializer,regularizer=tf.keras.regularizers.l2(l=0.01))
             attn2 = tf.get_variable(name='attn_neigh',shape=(output_dim/num_support,1),initializer=tf.glorot_uniform_initializer,regularizer=tf.keras.regularizers.l2(l=0.01))
-            #print(attn1)
-            #import pdb; pdb.set_trace()
-            self.vars['attn_weights'].append(attn1) #try weight_variable_random_uniform?
+            self.vars['attn_weights'].append(attn1) 
             self.vars['attn_weights'].append(attn2) # Use output dim because since the features are transformed to the output_dim.
             #self.vars['attn_weights'].append(tf.Variable(tf.glorot_uniform_initializer()((output_dim/num_support,1))))
             #self.vars['attn_weights'].append(tf.Variable(tf.glorot_uniform_initializer()((output_dim/num_support,1))))
