@@ -293,7 +293,7 @@ class AttentionalStackGCN(Layer):
             x_u = tf.nn.dropout(x_u, 1 - self.dropout) # Is this consistent with the paper? 
             x_v = tf.nn.dropout(x_v, 1 - self.dropout)
 
-        supports_u = []
+        supports_u = [] # support is basically adjacent matrix of a certain rating.
         supports_v = []
 
         for i in range(len(self.support)): # Equation 8

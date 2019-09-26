@@ -91,7 +91,7 @@ class Model(object):
 
 class RecommenderGAE(Model):
     def __init__(self, placeholders, input_dim, num_classes, num_support,
-                 learning_rate, num_basis_functions, hidden, num_users, num_items, accum,
+                 learning_rate, num_basis_functions, hidden, num_users, num_items, accum, attn_weights_regularization,
                  self_connections=False, **kwargs):
         super(RecommenderGAE, self).__init__(**kwargs)
 
@@ -119,6 +119,7 @@ class RecommenderGAE(Model):
         self.num_items = num_items
         self.accum = accum
         self.learning_rate = learning_rate
+        self.attn_weights_regularization = attn_weights_regularization
 
         # standard settings: beta1=0.9, beta2=0.999, epsilon=1.e-8
         self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate, beta1=0.9, beta2=0.999, epsilon=1.e-8)
@@ -138,10 +139,11 @@ class RecommenderGAE(Model):
 
     def _loss(self):
         self.loss += softmax_cross_entropy(self.outputs, self.labels)
-        # regularization
-        reg_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
-        #print(tf.reduce_sum(reg_losses))
-        self.loss += tf.reduce_sum(reg_losses) # weather to add regualrization
+        if self.attn_weights_regularization:
+            # regularization
+            reg_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
+            #print(tf.reduce_sum(reg_losses))
+            self.loss += tf.reduce_sum(reg_losses) # weather to regualrize attention weights
         tf.summary.scalar('loss', self.loss)
 
     def _accuracy(self):

@@ -60,6 +60,9 @@ ap.add_argument("-ds", "--data_seed", type=int, default=1234,
 ap.add_argument("-sdir", "--summaries_dir", type=str, default='logs/' + str(datetime.datetime.now()).replace(' ', '_'),
                 help="Directory for saving tensorflow summaries.")
 
+ap.add_argument("-attn", "--attention", type=bool, default=True, help="Flag to disable original normalozation")
+ap.add_argument("-attn_reg", "--attention_weights_regularization", type=bool, default=False, help="Whether to regularize the attention weights.")
+
 # Boolean flags
 fp = ap.add_mutually_exclusive_group(required=False)
 fp.add_argument('-nsym', '--norm_symmetric', dest='norm_symmetric',
@@ -110,8 +113,10 @@ FEATURES = args['features']
 SYM = args['norm_symmetric']
 TESTING = args['testing']
 ACCUM = args['accumulation']
+ATTN = args['attention']
+ATTN_REG = args['attention_weights_regularization']
 
-SELFCONNECTIONS = False
+SELFCONNECTIONS = False # Look into this! potential config to add self loop for each node!
 SPLITFROMFILE = True
 VERBOSE = True
 
@@ -215,12 +220,11 @@ for i in range(NUMCLASSES):
     support_unnormalized_transpose = support_unnormalized.T
     support.append(support_unnormalized)
     support_t.append(support_unnormalized_transpose)
-    #print(support_unnormalized_transpose.shape)
-    #import pdb;pdb.set_trace()
 
 # normalization!!
-#support = globally_normalize_bipartite_adjacency(support, symmetric=SYM)
-#support_t = globally_normalize_bipartite_adjacency(support_t, symmetric=SYM)
+if not ATTN:
+    support = globally_normalize_bipartite_adjacency(support, symmetric=SYM)
+    support_t = globally_normalize_bipartite_adjacency(support_t, symmetric=SYM)
 
 if SELFCONNECTIONS: #default false
     support.append(sp.identity(u_features.shape[0], format='csr'))
@@ -349,6 +353,7 @@ else:
                            num_items=num_items,
                            accum=ACCUM,
                            learning_rate=LR,
+                           attn_weights_regularization=ATTN_REG,
                            logging=True)
 
 # Convert sparse placeholders to tuples to construct feed_dict
