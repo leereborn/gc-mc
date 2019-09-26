@@ -286,13 +286,14 @@ class AttentionalStackGCN(Layer):
         #print(x_u.shape)
         #print(x_v.shape)
         #import pdb;pdb.set_trace()
+        '''
         if self.sparse_inputs:
             x_u = dropout_sparse(x_u, 1 - self.dropout, self.u_features_nonzero) 
             x_v = dropout_sparse(x_v, 1 - self.dropout, self.v_features_nonzero)
         else:
             x_u = tf.nn.dropout(x_u, 1 - self.dropout) # Is this consistent with the paper? 
             x_v = tf.nn.dropout(x_v, 1 - self.dropout)
-
+        '''
         supports_u = [] # support is basically adjacent matrix of a certain rating.
         supports_v = []
 
@@ -332,6 +333,8 @@ class AttentionalStackGCN(Layer):
             attn_coef_v = tf.nn.softmax(attn_coef_v)
 
             # Apply dropout
+            #tmp_u = tf.nn.dropout(tmp_u,rate=0.5)
+            #tmp_v = tf.nn.dropout(tmp_v,rate=0.5)
             #attn_coef_u = tf.nn.dropout(attn_coef_u,rate=0.5)
             #attn_coef_v = tf.nn.dropout(attn_coef_v,rate=0.5)
 
