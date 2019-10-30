@@ -242,15 +242,11 @@ class AttentionalStackGCN(Layer):
         print(input_dim,output_dim)
         with tf.variable_scope(self.name + '_vars'):
             self.vars['weights_u'] = weight_variable_random_uniform(input_dim, output_dim, name='weights_u')
-            self.vars['attn_weights']=[]
             attn1 = tf.get_variable(name='attn_self',shape=(output_dim/num_support,1),initializer=tf.glorot_uniform_initializer,regularizer=tf.keras.regularizers.l2(l=0.01))
             attn2 = tf.get_variable(name='attn_neigh',shape=(output_dim/num_support,1),initializer=tf.glorot_uniform_initializer,regularizer=tf.keras.regularizers.l2(l=0.01))
-            self.vars['attn_weights'].append(attn1) 
-            self.vars['attn_weights'].append(attn2) # Use output dim because since the features are transformed to the output_dim.
-            #self.vars['attn_weights'].append(tf.Variable(tf.glorot_uniform_initializer()((output_dim/num_support,1))))
-            #self.vars['attn_weights'].append(tf.Variable(tf.glorot_uniform_initializer()((output_dim/num_support,1))))
-            #self.vars['attn_weights'].append(tf.Variable(tf.initializers.he_normal()((output_dim/num_support,1))))
-            #self.vars['attn_weights'].append(tf.Variable(tf.initializers.he_normal()((output_dim/num_support,1))))
+            self.vars['attn_weights_0'] = attn1 
+            self.vars['attn_weights_1'] = attn2 # Use output dim because since the features are transformed to the output_dim.
+            
             if not share_user_item_weights:
                 self.vars['weights_v'] = weight_variable_random_uniform(input_dim, output_dim, name='weights_v')
 
@@ -303,12 +299,12 @@ class AttentionalStackGCN(Layer):
 
             support = self.support[i]
             support_transpose = self.support_transpose[i]
-
-            attn_for_self_u = dot(tmp_u,self.vars['attn_weights'][0]) # assume attention kernel is shared between u and v
-            attn_for_self_v = dot(tmp_v,self.vars['attn_weights'][0])
-            attn_for_neighs_u = dot(tmp_v,self.vars['attn_weights'][1])
-            attn_for_neighs_v = dot(tmp_u,self.vars['attn_weights'][1])
-
+            
+            attn_for_self_u = dot(tmp_u,self.vars['attn_weights_0']) # assume attention kernel is shared between u and v
+            attn_for_self_v = dot(tmp_v,self.vars['attn_weights_0'])
+            attn_for_neighs_u = dot(tmp_v,self.vars['attn_weights_1'])
+            attn_for_neighs_v = dot(tmp_u,self.vars['attn_weights_1'])
+           
             attn_coef_u = attn_for_self_u + tf.transpose(attn_for_neighs_u) #(943, 1682)
             attn_coef_u = tf.gather(attn_coef_u,self.list_u)
             attn_coef_v = attn_for_self_v + tf.transpose(attn_for_neighs_v) #(1682, 943)
@@ -333,10 +329,10 @@ class AttentionalStackGCN(Layer):
             attn_coef_v = tf.nn.softmax(attn_coef_v)
 
             # Apply dropout
-            #tmp_u = tf.nn.dropout(tmp_u,rate=0.5)
-            #tmp_v = tf.nn.dropout(tmp_v,rate=0.5)
-            #attn_coef_u = tf.nn.dropout(attn_coef_u,rate=0.5)
-            #attn_coef_v = tf.nn.dropout(attn_coef_v,rate=0.5)
+            #tmp_u = tf.nn.dropout(tmp_u,rate=self.dropout)
+            #tmp_v = tf.nn.dropout(tmp_v,rate=self.dropout)
+            #attn_coef_u = tf.nn.dropout(attn_coef_u,rate=self.dropout)
+            #attn_coef_v = tf.nn.dropout(attn_coef_v,rate=self.dropout)
 
             #print(attn_coef_u.shape)
             #print(attn_coef_v.shape)

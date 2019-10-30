@@ -51,7 +51,7 @@ ap.add_argument("-do", "--dropout", type=float, default=0.7,
                 help="Dropout fraction")
 
 ap.add_argument("-nb", "--num_basis_functions", type=int, default=2,
-                help="Number of basis functions for Mixture Model GCN.")
+                help="Number of basis functions for Mixture Model GCN.") # This argument is for the decoder
 
 ap.add_argument("-ds", "--data_seed", type=int, default=1234,
                 help="""Seed used to shuffle data in data_utils, taken from cf-nade (1234, 2341, 3412, 4123, 1324).
