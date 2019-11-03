@@ -100,6 +100,7 @@ class RecommenderGAE(Model):
         self.v_features_nonzero = placeholders['v_features_nonzero']
         self.support = placeholders['support']
         self.support_t = placeholders['support_t']
+        self.input_dropout = placeholders['input_dropout']
         self.dropout = placeholders['dropout']
         self.labels = placeholders['labels']
         self.u_indices = placeholders['user_indices']
@@ -195,7 +196,7 @@ class RecommenderGAE(Model):
                                         v_features_nonzero=self.v_features_nonzero,
                                         sparse_inputs=True,
                                         act=tf.nn.relu,
-                                        dropout=self.dropout,
+                                        input_dropout=self.input_dropout,
                                         logging=self.logging,
                                         share_user_item_weights=True))
 

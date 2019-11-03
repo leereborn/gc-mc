@@ -233,7 +233,7 @@ class AttentionalStackGCN(Layer):
     """Graph convolution layer for bipartite graphs and sparse inputs."""
 
     def __init__(self, list_u, list_v,input_dim, output_dim, support, support_t, num_support, u_features_nonzero=None,
-                 v_features_nonzero=None, sparse_inputs=False, dropout=0.,
+                 v_features_nonzero=None, sparse_inputs=False, input_dropout=0.,
                  act=tf.nn.relu, share_user_item_weights=True, **kwargs):
         super(AttentionalStackGCN, self).__init__(**kwargs) #?
 
@@ -256,7 +256,7 @@ class AttentionalStackGCN(Layer):
         self.weights_u = tf.split(value=self.vars['weights_u'], axis=1, num_or_size_splits=num_support)
         self.weights_v = tf.split(value=self.vars['weights_v'], axis=1, num_or_size_splits=num_support)
 
-        self.dropout = dropout
+        self.dropout = input_dropout
 
         self.sparse_inputs = sparse_inputs #sparse or cold start
         self.u_features_nonzero = u_features_nonzero

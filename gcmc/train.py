@@ -50,6 +50,9 @@ ap.add_argument("-ac", "--accumulation", type=str, default="sum", choices=['sum'
 ap.add_argument("-do", "--dropout", type=float, default=0.7,
                 help="Dropout fraction")
 
+ap.add_argument("-ido", "--input_dropout", type=float, default=0.3,
+                help="Dropout fraction")
+
 ap.add_argument("-nb", "--num_basis_functions", type=int, default=2,
                 help="Number of basis functions for Mixture Model GCN.") # This argument is for the decoder
 
@@ -103,6 +106,7 @@ DATASET = args['dataset']
 DATASEED = args['data_seed']
 NB_EPOCH = args['epochs']
 DO = args['dropout']
+IDO = args['input_dropout']
 HIDDEN = args['hidden']
 FEATHIDDEN = args['feat_hidden']
 BASES = args['num_basis_functions']
@@ -315,6 +319,7 @@ placeholders = {
 
     'class_values': tf.placeholder(tf.float32, shape=class_values.shape),
 
+    'input_dropout': tf.placeholder_with_default(0., shape=()),
     'dropout': tf.placeholder_with_default(0., shape=()),
     'weight_decay': tf.placeholder_with_default(0., shape=()),
 
@@ -377,17 +382,17 @@ v_features_nonzero = v_features[1].shape[0]
 # Feed_dicts for validation and test set stay constant over different update steps
 train_feed_dict = construct_feed_dict(placeholders, u_features, v_features, u_features_nonzero,
                                       v_features_nonzero, train_support, train_support_t,
-                                      train_labels, train_u_indices, train_v_indices, class_values, DO, train_u, train_v,
+                                      train_labels, train_u_indices, train_v_indices, class_values, IDO, DO, train_u, train_v,
                                       train_u_features_side, train_v_features_side)
 # No dropout for validation and test runs
 val_feed_dict = construct_feed_dict(placeholders, u_features, v_features, u_features_nonzero,
                                     v_features_nonzero, val_support, val_support_t,
-                                    val_labels, val_u_indices, val_v_indices, class_values, 0., val_u, val_v,
+                                    val_labels, val_u_indices, val_v_indices, class_values, 0., 0., val_u, val_v,
                                     val_u_features_side, val_v_features_side)
 
 test_feed_dict = construct_feed_dict(placeholders, u_features, v_features, u_features_nonzero,
                                      v_features_nonzero, test_support, test_support_t,
-                                     test_labels, test_u_indices, test_v_indices, class_values, 0., test_u, test_v,
+                                     test_labels, test_u_indices, test_v_indices, class_values, 0., 0., test_u, test_v,
                                      test_u_features_side, test_v_features_side)
 
 
