@@ -1,8 +1,11 @@
 import os
+from datetime import datetime
 
 input_rates = [0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
 dropout_rates = [0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
 
+with open('results.txt','a') as f:
+    f.write('{}\n'.format(datetime.now()))
 for input_rate in input_rates:
     for rate in dropout_rates:
         with open('results.txt','a') as f:
