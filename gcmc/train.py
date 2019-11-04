@@ -93,7 +93,7 @@ fp.add_argument('-v', '--validation', dest='testing',
 ap.set_defaults(testing=False)
 
 ap.add_argument("-wf", "--write_file", default=False, action='store_true', help="Write results to file")
-ap.add_argument("-attn", "--attention", type=bool, default=True, help="Flag to disable original normalozation")
+ap.add_argument("-attn", "--attention", default=False, action='store_true',help="Flag to disable original normalozation")
 ap.add_argument("-attn_reg", "--attention_weights_regularization", type=bool, default=False, help="Whether to regularize the attention weights.")
 
 args = vars(ap.parse_args())
@@ -360,6 +360,7 @@ else:
                            accum=ACCUM,
                            learning_rate=LR,
                            attn_weights_regularization=ATTN_REG,
+                           attn=ATTN,
                            logging=True)
 
 # Convert sparse placeholders to tuples to construct feed_dict

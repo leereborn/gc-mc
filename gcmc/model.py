@@ -91,7 +91,7 @@ class Model(object):
 
 class RecommenderGAE(Model):
     def __init__(self, placeholders, input_dim, num_classes, num_support,
-                 learning_rate, num_basis_functions, hidden, num_users, num_items, accum, attn_weights_regularization,
+                 learning_rate, num_basis_functions, hidden, num_users, num_items, accum, attn_weights_regularization, attn,
                  self_connections=False, **kwargs):
         super(RecommenderGAE, self).__init__(**kwargs)
 
@@ -121,6 +121,7 @@ class RecommenderGAE(Model):
         self.accum = accum
         self.learning_rate = learning_rate
         self.attn_weights_regularization = attn_weights_regularization
+        self.attn = attn #whether enable attention
 
         # standard settings: beta1=0.9, beta2=0.999, epsilon=1.e-8
         self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate, beta1=0.9, beta2=0.999, epsilon=1.e-8)
@@ -173,33 +174,33 @@ class RecommenderGAE(Model):
                                                  self_connections=False))
 
         elif self.accum == 'stack':
-            '''
-            self.layers.append(StackGCN(input_dim=self.input_dim,
-                                        output_dim=self.hidden[0],
-                                        support=self.support,
-                                        support_t=self.support_t,
-                                        num_support=self.num_support,
-                                        u_features_nonzero=self.u_features_nonzero,
-                                        v_features_nonzero=self.v_features_nonzero,
-                                        sparse_inputs=True,
-                                        act=tf.nn.relu,
-                                        dropout=self.dropout,
-                                        logging=self.logging,
-                                        share_user_item_weights=True))
-            '''
-            self.layers.append(AttentionalStackGCN(list_u=self.list_u, list_v=self.list_v, input_dim=self.input_dim,
-                                        output_dim=self.hidden[0],
-                                        support=self.support,
-                                        support_t=self.support_t,
-                                        num_support=self.num_support,
-                                        u_features_nonzero=self.u_features_nonzero,
-                                        v_features_nonzero=self.v_features_nonzero,
-                                        sparse_inputs=True,
-                                        act=tf.nn.relu,
-                                        input_dropout=self.input_dropout,
-                                        logging=self.logging,
-                                        share_user_item_weights=True))
-
+            if self.attn:
+                self.layers.append(AttentionalStackGCN(list_u=self.list_u, list_v=self.list_v, input_dim=self.input_dim,
+                                    output_dim=self.hidden[0],
+                                    support=self.support,
+                                    support_t=self.support_t,
+                                    num_support=self.num_support,
+                                    u_features_nonzero=self.u_features_nonzero,
+                                    v_features_nonzero=self.v_features_nonzero,
+                                    sparse_inputs=True,
+                                    act=tf.nn.relu,
+                                    input_dropout=self.input_dropout,
+                                    logging=self.logging,
+                                    share_user_item_weights=True))
+            else:
+                self.layers.append(StackGCN(input_dim=self.input_dim,
+                                            output_dim=self.hidden[0],
+                                            support=self.support,
+                                            support_t=self.support_t,
+                                            num_support=self.num_support,
+                                            u_features_nonzero=self.u_features_nonzero,
+                                            v_features_nonzero=self.v_features_nonzero,
+                                            sparse_inputs=True,
+                                            act=tf.nn.relu,
+                                            dropout=self.input_dropout,
+                                            logging=self.logging,
+                                            share_user_item_weights=True))
+                
         else:
             raise ValueError('accumulation function option invalid, can only be stack or sum.')
 
