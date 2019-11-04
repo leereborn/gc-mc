@@ -63,9 +63,6 @@ ap.add_argument("-ds", "--data_seed", type=int, default=1234,
 ap.add_argument("-sdir", "--summaries_dir", type=str, default='logs/' + str(datetime.datetime.now()).replace(' ', '_'),
                 help="Directory for saving tensorflow summaries.")
 
-ap.add_argument("-attn", "--attention", type=bool, default=True, help="Flag to disable original normalozation")
-ap.add_argument("-attn_reg", "--attention_weights_regularization", type=bool, default=False, help="Whether to regularize the attention weights.")
-
 # Boolean flags
 fp = ap.add_mutually_exclusive_group(required=False)
 fp.add_argument('-nsym', '--norm_symmetric', dest='norm_symmetric',
@@ -95,6 +92,9 @@ fp.add_argument('-v', '--validation', dest='testing',
                 help="Option to only use validation set evaluation", action='store_false')
 ap.set_defaults(testing=False)
 
+ap.add_argument("-wf", "--write_file", default=False, action='store_true', help="Write results to file")
+ap.add_argument("-attn", "--attention", type=bool, default=True, help="Flag to disable original normalozation")
+ap.add_argument("-attn_reg", "--attention_weights_regularization", type=bool, default=False, help="Whether to regularize the attention weights.")
 
 args = vars(ap.parse_args())
 
@@ -119,6 +119,7 @@ TESTING = args['testing']
 ACCUM = args['accumulation']
 ATTN = args['attention']
 ATTN_REG = args['attention_weights_regularization']
+WRF = args['write_file']
 
 SELFCONNECTIONS = False # Look into this! potential config to add self loop for each node!
 SPLITFROMFILE = True
@@ -486,7 +487,9 @@ if TESTING:
     test_avg_loss, test_rmse = sess.run([model.loss, model.rmse], feed_dict=test_feed_dict)
     print('test loss = ', test_avg_loss)
     print('test rmse = ', test_rmse)
-
+    if WRF: # write results to file
+        with open("results.txt",'a') as f:
+            f.write('test loss = {}\ntest rmse = {}\n\n'.format(test_avg_loss,test_rmse))
     # restore with polyak averages of parameters
     variables_to_restore = model.variable_averages.variables_to_restore()
     saver = tf.train.Saver(variables_to_restore)
