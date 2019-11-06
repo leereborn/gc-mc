@@ -300,14 +300,14 @@ class AttentionalStackGCN(Layer):
             support = self.support[i]
             support_transpose = self.support_transpose[i]
             
-            attn_for_self_u = dot(tmp_u,self.vars['attn_weights_0']) # assume attention kernel is shared between u and v
-            attn_for_self_v = dot(tmp_v,self.vars['attn_weights_0'])
-            attn_for_neighs_u = dot(tmp_v,self.vars['attn_weights_1'])
-            attn_for_neighs_v = dot(tmp_u,self.vars['attn_weights_1'])
+            attn_for_u = dot(tmp_u,self.vars['attn_weights_0'])
+            attn_for_v = dot(tmp_v,self.vars['attn_weights_1'])
            
-            attn_coef_u = attn_for_self_u + tf.transpose(attn_for_neighs_u) #(943, 1682)
+            attn_coef_u = attn_for_u + tf.transpose(attn_for_v) #(943, 1682)
+            attn_coef_v = tf.transpose(attn_coef_u) #(1682, 943)
+            #print(self.list_u.shape,self.list_v.shape)
+            #import pdb; pdb.set_trace()
             attn_coef_u = tf.gather(attn_coef_u,self.list_u)
-            attn_coef_v = attn_for_self_v + tf.transpose(attn_for_neighs_v) #(1682, 943)
             attn_coef_v = tf.gather(attn_coef_v,self.list_v)
 
             # Add non-linearty

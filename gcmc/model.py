@@ -175,7 +175,8 @@ class RecommenderGAE(Model):
 
         elif self.accum == 'stack':
             if self.attn:
-                self.layers.append(AttentionalStackGCN(list_u=self.list_u, list_v=self.list_v, input_dim=self.input_dim,
+                self.layers.append(AttentionalStackGCN(list_u=self.list_u, list_v=self.list_v, 
+                                    input_dim=self.input_dim,
                                     output_dim=self.hidden[0],
                                     support=self.support,
                                     support_t=self.support_t,
