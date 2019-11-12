@@ -279,17 +279,14 @@ class AttentionalStackGCN(Layer):
     def _call(self, inputs):
         x_u = inputs[0]
         x_v = inputs[1]
-        #print(x_u.shape)
-        #print(x_v.shape)
-        #import pdb;pdb.set_trace()
-        
+        '''
         if self.sparse_inputs:
-            x_u = dropout_sparse(x_u, 1 - self.dropout, self.u_features_nonzero) 
-            x_v = dropout_sparse(x_v, 1 - self.dropout, self.v_features_nonzero)
+            x_u_d = dropout_sparse(x_u, 1 - self.dropout, self.u_features_nonzero) 
+            x_v_d = dropout_sparse(x_v, 1 - self.dropout, self.v_features_nonzero)
         else:
-            x_u = tf.nn.dropout(x_u, 1 - self.dropout) # Is this consistent with the paper? 
-            x_v = tf.nn.dropout(x_v, 1 - self.dropout)
-        
+            x_u_d = tf.nn.dropout(x_u, 1 - self.dropout) # Is this consistent with the paper? 
+            x_v_d = tf.nn.dropout(x_v, 1 - self.dropout)
+        '''
         supports_u = [] # support is basically adjacent matrix of a certain rating.
         supports_v = []
 
@@ -305,8 +302,6 @@ class AttentionalStackGCN(Layer):
            
             attn_coef_u = attn_for_u + tf.transpose(attn_for_v) #(943, 1682)
             attn_coef_v = tf.transpose(attn_coef_u) #(1682, 943)
-            #print(self.list_u.shape,self.list_v.shape)
-            #import pdb; pdb.set_trace()
             attn_coef_u = tf.gather(attn_coef_u,self.list_u)
             attn_coef_v = tf.gather(attn_coef_v,self.list_v)
 
@@ -329,15 +324,15 @@ class AttentionalStackGCN(Layer):
             attn_coef_v = tf.nn.softmax(attn_coef_v)
 
             # Apply dropout
-            #tmp_u = tf.nn.dropout(tmp_u,rate=self.dropout)
-            #tmp_v = tf.nn.dropout(tmp_v,rate=self.dropout)
-            #attn_coef_u = tf.nn.dropout(attn_coef_u,rate=self.dropout)
-            #attn_coef_v = tf.nn.dropout(attn_coef_v,rate=self.dropout)
-
-            #print(attn_coef_u.shape)
-            #print(attn_coef_v.shape)
-            #import pdb;pdb.set_trace()
-
+            tmp_u = tf.nn.dropout(tmp_u,rate=self.dropout)
+            tmp_v = tf.nn.dropout(tmp_v,rate=self.dropout)
+            attn_coef_u = tf.nn.dropout(attn_coef_u,rate=self.dropout)
+            attn_coef_v = tf.nn.dropout(attn_coef_v,rate=self.dropout)
+            
+            #tmp_u_d = dot(x_u_d, self.weights_u[i], sparse=self.sparse_inputs)
+            #tmp_v_d = dot(x_v_d, self.weights_v[i], sparse=self.sparse_inputs)
+            #supports_u.append(tf.linalg.matmul(attn_coef_u, tmp_v_d))
+            #supports_v.append(tf.linalg.matmul(attn_coef_v, tmp_u_d))
             supports_u.append(tf.linalg.matmul(attn_coef_u, tmp_v))
             supports_v.append(tf.linalg.matmul(attn_coef_v, tmp_u))
 
