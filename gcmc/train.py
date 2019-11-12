@@ -92,7 +92,8 @@ fp.add_argument('-v', '--validation', dest='testing',
                 help="Option to only use validation set evaluation", action='store_false')
 ap.set_defaults(testing=False)
 
-ap.add_argument("-wf", "--write_file", default=False, action='store_true', help="Write results to file")
+#ap.add_argument("-wf", "--write_file", default=False, action='store_true', help="Write results to file")
+ap.add_argument("-wf", "--write_file", type=str, help="Write results to file")
 ap.add_argument("-attn", "--attention", default=False, action='store_true',help="Flag to disable original normalozation")
 ap.add_argument("-attn_reg", "--attention_weights_regularization", type=bool, default=False, help="Whether to regularize the attention weights.")
 
@@ -489,7 +490,7 @@ if TESTING:
     print('test loss = ', test_avg_loss)
     print('test rmse = ', test_rmse)
     if WRF: # write results to file
-        with open("results.txt",'a') as f:
+        with open(WRF,'a') as f:
             f.write('test loss = {}\ntest rmse = {}\n\n'.format(test_avg_loss,test_rmse))
     # restore with polyak averages of parameters
     variables_to_restore = model.variable_averages.variables_to_restore()
