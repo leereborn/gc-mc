@@ -235,11 +235,13 @@ class AttentionalStackGCN(Layer):
     def __init__(self, list_u, list_v,input_dim, output_dim, support, support_t, num_support, u_features_nonzero=None,
                  v_features_nonzero=None, sparse_inputs=False, input_dropout=0.,
                  act=tf.nn.relu, share_user_item_weights=True, **kwargs):
-        super(AttentionalStackGCN, self).__init__(**kwargs) #?
+        super(AttentionalStackGCN, self).__init__(**kwargs) #What does this do?
+
+        #print(input_dim,output_dim) # (None,500)
+        #import pdb; pdb.set_trace()
 
         assert output_dim % num_support == 0, 'output_dim must be multiple of num_support for stackGC layer'
 
-        print(input_dim,output_dim)
         with tf.variable_scope(self.name + '_vars'):
             self.vars['weights_u'] = weight_variable_random_uniform(input_dim, output_dim, name='weights_u')
             attn1 = tf.get_variable(name='attn_self',shape=(output_dim/num_support,1),initializer=tf.glorot_uniform_initializer,regularizer=tf.keras.regularizers.l2(l=0.01))
@@ -423,10 +425,10 @@ class OrdinalMixtureGCN(Layer): # Section 2.7 Weight sharing
             self.weights_u_self_conn = None
             self.weights_v_self_conn = None
 
-        self.support_nnz = []
+        self.support_nnz = [] #What is this that never gets used?
         self.support_transpose_nnz = []
         for i in range(len(self.support)):
-            nnz = tf.reduce_sum(tf.shape(self.support[i].values)) # What is nnz?
+            nnz = tf.reduce_sum(tf.shape(self.support[i].values))
             self.support_nnz.append(nnz)
             self.support_transpose_nnz.append(nnz)
 
@@ -448,7 +450,7 @@ class OrdinalMixtureGCN(Layer): # Section 2.7 Weight sharing
         supports_v = []
 
         # self-connections with identity matrix as support
-        if self.self_connections:
+        if self.self_connections: # Why uw and vw never get used anywhere else?
             uw = dot(x_u, self.weights_u_self_conn, sparse=self.sparse_inputs)
             supports_u.append(tf.sparse_tensor_dense_matmul(self.u_self_connections, uw))
 
@@ -496,7 +498,188 @@ class OrdinalMixtureGCN(Layer): # Section 2.7 Weight sharing
                 tf.summary.histogram(self.name + '/outputs_v', outputs_v)
             return outputs_u, outputs_v
 
+class AttentionalOrdinalMixtureGCN(Layer): # Section 2.7 Weight sharing
 
+    """Graph convolution layer for bipartite graphs and sparse inputs."""
+
+    def __init__(self, list_u, list_v, input_dim, output_dim, support, support_t, num_support, u_features_nonzero=None,
+                 v_features_nonzero=None, sparse_inputs=False, dropout=0.,
+                 act=tf.nn.relu, bias=False, share_user_item_weights=False, self_connections=False, **kwargs):
+        super(AttentionalOrdinalMixtureGCN, self).__init__(**kwargs)
+        #print(input_dim, output_dim) # (None, 500)
+        #import pdb; pdb.set_trace()
+
+        with tf.variable_scope(self.name + '_vars'):
+
+            self.vars['weights_u'] = tf.stack([weight_variable_random_uniform(input_dim, output_dim,
+                                                                             name='weights_u_%d' % i)
+                                              for i in range(num_support)], axis=0) # Returns an array of weight matrices
+
+            if bias:
+                self.vars['bias_u'] = bias_variable_const([output_dim], 0.01, name="bias_u")
+
+            if not share_user_item_weights:
+                self.vars['weights_v'] = tf.stack([weight_variable_random_uniform(input_dim, output_dim,
+                                                                                 name='weights_v_%d' % i)
+                                                  for i in range(num_support)], axis=0)
+
+                if bias:
+                    self.vars['bias_v'] = bias_variable_const([output_dim], 0.01, name="bias_v")
+
+            else:
+                self.vars['weights_v'] = self.vars['weights_u']
+                if bias:
+                    self.vars['bias_v'] = self.vars['bias_u']
+            attn1 = tf.get_variable(name='attn_self',shape=(output_dim,1),initializer=tf.glorot_uniform_initializer,regularizer=tf.keras.regularizers.l2(l=0.01))
+            attn2 = tf.get_variable(name='attn_neigh',shape=(output_dim,1),initializer=tf.glorot_uniform_initializer,regularizer=tf.keras.regularizers.l2(l=0.01))
+            self.vars['attn_weights_0'] = attn1 
+            self.vars['attn_weights_1'] = attn2
+
+        self.weights_u = self.vars['weights_u']
+        self.weights_v = self.vars['weights_v']
+
+        self.dropout = dropout
+
+        self.sparse_inputs = sparse_inputs
+        self.u_features_nonzero = u_features_nonzero
+        self.v_features_nonzero = v_features_nonzero
+        if sparse_inputs:
+            assert u_features_nonzero is not None and v_features_nonzero is not None, \
+                'u_features_nonzero and v_features_nonzero can not be None when sparse_inputs is True'
+
+        self.self_connections = self_connections
+
+        self.bias = bias
+        support = tf.sparse_split(axis=1, num_split=num_support, sp_input=support)
+
+        support_t = tf.sparse_split(axis=1, num_split=num_support, sp_input=support_t)
+
+        if self_connections:
+            self.support = support[:-1]
+            self.support_transpose = support_t[:-1]
+            self.u_self_connections = support[-1]
+            self.v_self_connections = support_t[-1]
+            self.weights_u = self.weights_u[:-1]
+            self.weights_v = self.weights_v[:-1]
+            self.weights_u_self_conn = self.weights_u[-1]
+            self.weights_v_self_conn = self.weights_v[-1]
+
+        else:
+            self.support = support
+            self.support_transpose = support_t
+            self.u_self_connections = None
+            self.v_self_connections = None
+            self.weights_u_self_conn = None
+            self.weights_v_self_conn = None
+
+        self.support_nnz = [] #What is this that never gets used?
+        self.support_transpose_nnz = []
+        for i in range(len(self.support)):
+            nnz = tf.reduce_sum(tf.shape(self.support[i].values))
+            self.support_nnz.append(nnz)
+            self.support_transpose_nnz.append(nnz)
+
+        self.act = act
+
+        self.list_u=list_u
+        self.list_v=list_v
+
+        if self.logging:
+            self._log_vars()
+
+    def _call(self, inputs):
+        x_u = inputs[0]
+        x_v = inputs[1]
+        '''
+        if self.sparse_inputs:
+            x_u = dropout_sparse(inputs[0], 1 - self.dropout, self.u_features_nonzero)
+            x_v = dropout_sparse(inputs[1], 1 - self.dropout, self.v_features_nonzero)
+        else:
+            x_u = tf.nn.dropout(inputs[0], 1 - self.dropout)
+            x_v = tf.nn.dropout(inputs[1], 1 - self.dropout)
+        '''
+        supports_u = []
+        supports_v = []
+
+        # self-connections with identity matrix as support
+        if self.self_connections: # Why append to supports?
+            uw = dot(x_u, self.weights_u_self_conn, sparse=self.sparse_inputs)
+            supports_u.append(tf.sparse_tensor_dense_matmul(self.u_self_connections, uw))
+
+            vw = dot(x_v, self.weights_v_self_conn, sparse=self.sparse_inputs)
+            supports_v.append(tf.sparse_tensor_dense_matmul(self.v_self_connections, vw))
+
+        wu = 0.
+        wv = 0.
+        for i in range(len(self.support)):
+            wu += self.weights_u[i]
+            wv += self.weights_v[i]
+
+            # multiply feature matrices with weights
+            tmp_u = dot(x_u, wu, sparse=self.sparse_inputs)
+            tmp_v = dot(x_v, wv, sparse=self.sparse_inputs)
+
+            support = self.support[i]
+            support_transpose = self.support_transpose[i]
+
+            # attn implementation
+            attn_for_u = dot(tmp_u,self.vars['attn_weights_0'])
+            attn_for_v = dot(tmp_v,self.vars['attn_weights_1'])
+           
+            attn_coef_u = attn_for_u + tf.transpose(attn_for_v)
+            attn_coef_v = tf.transpose(attn_coef_u)
+            attn_coef_u = tf.gather(attn_coef_u,self.list_u)
+            attn_coef_v = tf.gather(attn_coef_v,self.list_v)
+
+            # Add non-linearty
+            attn_coef_u = tf.nn.leaky_relu(attn_coef_u)
+            attn_coef_v = tf.nn.leaky_relu(attn_coef_v)
+            
+            sparse_supp = tf.sparse.reorder(support)
+            sparse_supp_t = tf.sparse.reorder(support_transpose)
+            dense_supp = tf.sparse.to_dense(sparse_supp)
+            dense_supp_t = tf.sparse.to_dense(sparse_supp_t)
+
+            mask_supp = -10e9 * (1.0 - dense_supp)
+            attn_coef_u += mask_supp
+            mask_supp_t = -10e9 * (1.0 - dense_supp_t)
+            attn_coef_v += mask_supp_t
+
+            # Apply softmax to coefficients
+            attn_coef_u = tf.nn.softmax(attn_coef_u)
+            attn_coef_v = tf.nn.softmax(attn_coef_v)
+
+            # Apply dropout
+            tmp_u = tf.nn.dropout(tmp_u,rate=self.dropout)
+            tmp_v = tf.nn.dropout(tmp_v,rate=self.dropout)
+            attn_coef_u = tf.nn.dropout(attn_coef_u,rate=self.dropout)
+            attn_coef_v = tf.nn.dropout(attn_coef_v,rate=self.dropout)
+            # then multiply with rating matrices
+            supports_u.append(tf.sparse_tensor_dense_matmul(support, tmp_v))
+            supports_v.append(tf.sparse_tensor_dense_matmul(support_transpose, tmp_u))
+
+        z_u = tf.add_n(supports_u)
+        z_v = tf.add_n(supports_v)
+
+        if self.bias:
+            z_u = tf.nn.bias_add(z_u, self.vars['bias_u'])
+            z_v = tf.nn.bias_add(z_v, self.vars['bias_v'])
+
+        u_outputs = self.act(z_u)
+        v_outputs = self.act(z_v)
+
+        return u_outputs, v_outputs
+
+    def __call__(self, inputs):
+        with tf.name_scope(self.name):
+            if self.logging and not self.sparse_inputs:
+                tf.summary.histogram(self.name + '/inputs_u', inputs[0])
+                tf.summary.histogram(self.name + '/inputs_v', inputs[1])
+            outputs_u, outputs_v = self._call(inputs)
+            if self.logging:
+                tf.summary.histogram(self.name + '/outputs_u', outputs_u)
+                tf.summary.histogram(self.name + '/outputs_v', outputs_v)
+            return outputs_u, outputs_v
 class BilinearMixture(Layer):
     """
     Decoder model layer for link-prediction with ratings
