@@ -90,7 +90,7 @@ class Dense(Layer):
     def __init__(self, input_dim, output_dim, dropout=0., act=tf.nn.relu, share_user_item_weights=False,
                  bias=False, **kwargs):
         super(Dense, self).__init__(**kwargs)
-
+        #input_dim /= 5
         with tf.variable_scope(self.name + '_vars'):
             if not share_user_item_weights:
 
@@ -145,7 +145,6 @@ class Dense(Layer):
                 tf.summary.histogram(self.name + '/outputs_u', outputs_u)
                 tf.summary.histogram(self.name + '/outputs_v', outputs_v)
             return outputs_u, outputs_v
-
 
 class StackGCN(Layer): # accum resorts to stack
     """Graph convolution layer for bipartite graphs and sparse inputs."""
@@ -601,6 +600,8 @@ class AttentionalOrdinalMixtureGCN(Layer): # Section 2.7 Weight sharing
         supports_u = []
         supports_v = []
 
+        #print(self.self_connections) # False
+        #import pdb; pdb.set_trace()
         # self-connections with identity matrix as support
         if self.self_connections: # Why append to supports?
             uw = dot(x_u, self.weights_u_self_conn, sparse=self.sparse_inputs)
@@ -655,13 +656,17 @@ class AttentionalOrdinalMixtureGCN(Layer): # Section 2.7 Weight sharing
             attn_coef_u = tf.nn.dropout(attn_coef_u,rate=self.dropout)
             attn_coef_v = tf.nn.dropout(attn_coef_v,rate=self.dropout)
             # then multiply with rating matrices
-            supports_u.append(tf.sparse_tensor_dense_matmul(support, tmp_v))
-            supports_v.append(tf.sparse_tensor_dense_matmul(support_transpose, tmp_u))
+            supports_u.append(tf.linalg.matmul(attn_coef_u, tmp_v))
+            supports_v.append(tf.linalg.matmul(attn_coef_v, tmp_u))
 
         z_u = tf.add_n(supports_u)
         z_v = tf.add_n(supports_v)
+        #z_u = tf.concat(axis=1, values=supports_u) # The summation in Eq. 8 is replaced by concatenation.
+        #z_v = tf.concat(axis=1, values=supports_v)
 
-        if self.bias:
+        #print(self.bias)
+        #import pdb; pdb.set_trace()
+        if self.bias: #False
             z_u = tf.nn.bias_add(z_u, self.vars['bias_u'])
             z_v = tf.nn.bias_add(z_v, self.vars['bias_v'])
 
