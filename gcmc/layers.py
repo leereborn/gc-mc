@@ -243,8 +243,8 @@ class AttentionalStackGCN(Layer):
 
         with tf.variable_scope(self.name + '_vars'):
             self.vars['weights_u'] = weight_variable_random_uniform(input_dim, output_dim, name='weights_u')
-            attn1 = tf.get_variable(name='attn_self',shape=(output_dim/num_support,1),initializer=tf.glorot_uniform_initializer,regularizer=tf.keras.regularizers.l2(l=0.01))
-            attn2 = tf.get_variable(name='attn_neigh',shape=(output_dim/num_support,1),initializer=tf.glorot_uniform_initializer,regularizer=tf.keras.regularizers.l2(l=0.01))
+            attn1 = tf.get_variable(name='attn_self',shape=(output_dim,1),initializer=tf.glorot_uniform_initializer,regularizer=tf.keras.regularizers.l2(l=0.01))
+            attn2 = tf.get_variable(name='attn_neigh',shape=(output_dim,1),initializer=tf.glorot_uniform_initializer,regularizer=tf.keras.regularizers.l2(l=0.01))
             self.vars['attn_weights_0'] = attn1 
             self.vars['attn_weights_1'] = attn2 # Use output dim because since the features are transformed to the output_dim.
             
@@ -256,6 +256,9 @@ class AttentionalStackGCN(Layer):
 
         self.weights_u = tf.split(value=self.vars['weights_u'], axis=1, num_or_size_splits=num_support)
         self.weights_v = tf.split(value=self.vars['weights_v'], axis=1, num_or_size_splits=num_support)
+
+        self.attn_weights_u = tf.split(value=self.vars['attn_weights_0'], axis=0, num_or_size_splits=num_support)
+        self.attn_weights_v = tf.split(value=self.vars['attn_weights_1'], axis=0, num_or_size_splits=num_support)
 
         self.dropout = input_dropout
 
@@ -298,8 +301,8 @@ class AttentionalStackGCN(Layer):
             support = self.support[i]
             support_transpose = self.support_transpose[i]
             
-            attn_for_u = dot(tmp_u,self.vars['attn_weights_0'])
-            attn_for_v = dot(tmp_v,self.vars['attn_weights_1'])
+            attn_for_u = dot(tmp_u,self.attn_weights_u[i])
+            attn_for_v = dot(tmp_v,self.attn_weights_v[i])
            
             attn_coef_u = attn_for_u + tf.transpose(attn_for_v) #(943, 1682)
             attn_coef_v = tf.transpose(attn_coef_u) #(1682, 943)
@@ -685,6 +688,7 @@ class AttentionalOrdinalMixtureGCN(Layer): # Section 2.7 Weight sharing
                 tf.summary.histogram(self.name + '/outputs_u', outputs_u)
                 tf.summary.histogram(self.name + '/outputs_v', outputs_v)
             return outputs_u, outputs_v
+            
 class BilinearMixture(Layer):
     """
     Decoder model layer for link-prediction with ratings
