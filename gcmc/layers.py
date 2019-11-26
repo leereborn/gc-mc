@@ -532,10 +532,10 @@ class AttentionalOrdinalMixtureGCN(Layer): # Section 2.7 Weight sharing
                 self.vars['weights_v'] = self.vars['weights_u']
                 if bias:
                     self.vars['bias_v'] = self.vars['bias_u']
-            attn1 = tf.get_variable(name='attn_self',shape=(output_dim,1),initializer=tf.glorot_uniform_initializer,regularizer=tf.keras.regularizers.l2(l=0.01))
-            attn2 = tf.get_variable(name='attn_neigh',shape=(output_dim,1),initializer=tf.glorot_uniform_initializer,regularizer=tf.keras.regularizers.l2(l=0.01))
-            self.vars['attn_weights_0'] = attn1 
-            self.vars['attn_weights_1'] = attn2
+
+            for i in range(num_support):
+                self.vars['attn_weights_u_{}'.format(i)] = tf.get_variable(name='attn_u_{}'.format(i),shape=(output_dim,1),initializer=tf.glorot_uniform_initializer,regularizer=tf.keras.regularizers.l2(l=0.01))
+                self.vars['attn_weights_v_{}'.format(i)] = tf.get_variable(name='attn_v_{}'.format(i),shape=(output_dim,1),initializer=tf.glorot_uniform_initializer,regularizer=tf.keras.regularizers.l2(l=0.01))
 
         self.weights_u = self.vars['weights_u']
         self.weights_v = self.vars['weights_v']
@@ -627,8 +627,8 @@ class AttentionalOrdinalMixtureGCN(Layer): # Section 2.7 Weight sharing
             support_transpose = self.support_transpose[i]
 
             # attn implementation
-            attn_for_u = dot(tmp_u,self.vars['attn_weights_0'])
-            attn_for_v = dot(tmp_v,self.vars['attn_weights_1'])
+            attn_for_u = dot(tmp_u,self.vars['attn_weights_u_{}'.format(i)])
+            attn_for_v = dot(tmp_v,self.vars['attn_weights_v_{}'.format(i)])
            
             attn_coef_u = attn_for_u + tf.transpose(attn_for_v)
             attn_coef_v = tf.transpose(attn_coef_u)
