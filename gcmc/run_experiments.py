@@ -1,9 +1,9 @@
 import os
 from datetime import datetime
 
-out_file_name = '2019-11-22.txt'
+out_file_name = '2019-11-23.txt'
 itr_times = 5
-accum = 'stack' # sum or stack
+accum = 'sum' # sum or stack
 
 def grid_search():
     input_rates = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]
@@ -18,7 +18,7 @@ def grid_search():
         for rate in dropout_rates:
             with open(out_file_name,'a') as f:
                 f.write('Input dropout rate: {}, dropout rate: {}, average of {} experiments\n'.format(input_rate,rate,itr_times)) 
-            os.system("python train.py -d ml_100k --accum {} -ido {} -do {} -nleft -nb 2 -e 1000 -wf {} --testing -attn -ne {}".format(accum,input_rate,rate,out_file_name,itr_times))
+            os.system("python train.py -d ml_1m --accum {} -ido {} -do {} -nsym -nb 2 -e 3500 -wf {} --testing -attn -ne {}".format(accum,input_rate,rate,out_file_name,itr_times))
 
 def individual_experiments():
     #dropouts = [(0.4,0.6),(0.5,0.4),(0.5,0.5),(0.5,0.7)]
@@ -32,8 +32,8 @@ def individual_experiments():
         os.system("python train.py -d ml_100k --accum {} -ido {} -do {} -nleft -nb 2 -e 1000 -wf {} --testing -attn -ne {}".format(accum,i,j,out_file_name,itr_times))
 
 def main():
-    grid_search()
-    #individual_experiments()
+    #grid_search()
+    individual_experiments()
 
 if __name__ == "__main__":
     main()

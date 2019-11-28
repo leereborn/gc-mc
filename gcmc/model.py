@@ -320,7 +320,7 @@ class RecommenderSideInfoGAE(Model):
                                                  support=self.support,
                                                  support_t=self.support_t,
                                                  num_support=self.num_support,
-                                                 u_features_nonzero=self.u_features_nonzero,
+                                                 u_features_nonzero=self.u_features_nonzero, # this is for the sparse input
                                                  v_features_nonzero=self.v_features_nonzero,
                                                  sparse_inputs=True,
                                                  act=tf.nn.relu,
