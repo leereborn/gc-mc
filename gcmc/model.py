@@ -246,7 +246,7 @@ class RecommenderGAE(Model):
 class RecommenderSideInfoGAE(Model):
     def __init__(self,  placeholders, input_dim, feat_hidden_dim, num_classes, num_support,
                  learning_rate, num_basis_functions, hidden, num_users, num_items, accum,
-                 num_side_features, self_connections=False, **kwargs):
+                 num_side_features, attn, self_connections=False, **kwargs):
         super(RecommenderSideInfoGAE, self).__init__(**kwargs)
 
         self.inputs = (placeholders['u_features'], placeholders['v_features'])
@@ -257,11 +257,15 @@ class RecommenderSideInfoGAE(Model):
         self.v_features_nonzero = placeholders['v_features_nonzero']
         self.support = placeholders['support']
         self.support_t = placeholders['support_t']
+        self.input_dropout = placeholders['input_dropout']
         self.dropout = placeholders['dropout']
         self.labels = placeholders['labels']
         self.u_indices = placeholders['user_indices']
         self.v_indices = placeholders['item_indices']
         self.class_values = placeholders['class_values']
+
+        self.list_u = placeholders['list_u']
+        self.list_v = placeholders['list_v']
 
         self.num_side_features = num_side_features
         self.feat_hidden_dim = feat_hidden_dim
@@ -283,6 +287,8 @@ class RecommenderSideInfoGAE(Model):
         self.num_items = num_items
         self.accum = accum
         self.learning_rate = learning_rate
+
+        self.attn = attn
 
         # standard settings: beta1=0.9, beta2=0.999, epsilon=1.e-8
         self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate, beta1=0.9, beta2=0.999, epsilon=1.e-8)
@@ -315,7 +321,9 @@ class RecommenderSideInfoGAE(Model):
 
     def _build(self):
         if self.accum == 'sum':
-            self.layers.append(OrdinalMixtureGCN(input_dim=self.input_dim,
+            if self.attn:
+                self.layers.append(AttentionalOrdinalMixtureGCN(list_u=self.list_u, list_v=self.list_v,
+                                                 input_dim=self.input_dim,
                                                  output_dim=self.hidden[0],
                                                  support=self.support,
                                                  support_t=self.support_t,
@@ -325,24 +333,54 @@ class RecommenderSideInfoGAE(Model):
                                                  sparse_inputs=True,
                                                  act=tf.nn.relu,
                                                  bias=False,
-                                                 dropout=self.dropout,
+                                                 dropout=self.input_dropout,
                                                  logging=self.logging,
                                                  share_user_item_weights=True,
-                                                 self_connections=self.self_connections))
+                                                 self_connections=False))
+            else:
+                self.layers.append(OrdinalMixtureGCN(input_dim=self.input_dim,
+                                                    output_dim=self.hidden[0],
+                                                    support=self.support,
+                                                    support_t=self.support_t,
+                                                    num_support=self.num_support,
+                                                    u_features_nonzero=self.u_features_nonzero,
+                                                    v_features_nonzero=self.v_features_nonzero,
+                                                    sparse_inputs=True,
+                                                    act=tf.nn.relu,
+                                                    bias=False,
+                                                    dropout=self.input_dropout,
+                                                    logging=self.logging,
+                                                    share_user_item_weights=True,
+                                                    self_connections=False))
 
         elif self.accum == 'stack':
-            self.layers.append(StackGCN(input_dim=self.input_dim,
-                                        output_dim=self.hidden[0],
-                                        support=self.support,
-                                        support_t=self.support_t,
-                                        num_support=self.num_support,
-                                        u_features_nonzero=self.u_features_nonzero,
-                                        v_features_nonzero=self.v_features_nonzero,
-                                        sparse_inputs=True,
-                                        act=tf.nn.relu,
-                                        dropout=self.dropout,
-                                        logging=self.logging,
-                                        share_user_item_weights=True))
+            if self.attn:
+                self.layers.append(AttentionalStackGCN(list_u=self.list_u, list_v=self.list_v, 
+                                    input_dim=self.input_dim,
+                                    output_dim=self.hidden[0],
+                                    support=self.support,
+                                    support_t=self.support_t,
+                                    num_support=self.num_support,
+                                    u_features_nonzero=self.u_features_nonzero,
+                                    v_features_nonzero=self.v_features_nonzero,
+                                    sparse_inputs=True,
+                                    act=tf.nn.relu,
+                                    input_dropout=self.input_dropout,
+                                    logging=self.logging,
+                                    share_user_item_weights=True))
+            else:
+                self.layers.append(StackGCN(input_dim=self.input_dim,
+                                            output_dim=self.hidden[0],
+                                            support=self.support,
+                                            support_t=self.support_t,
+                                            num_support=self.num_support,
+                                            u_features_nonzero=self.u_features_nonzero,
+                                            v_features_nonzero=self.v_features_nonzero,
+                                            sparse_inputs=True,
+                                            act=tf.nn.relu,
+                                            dropout=self.input_dropout,
+                                            logging=self.logging,
+                                            share_user_item_weights=True))
 
         else:
             raise ValueError('accumulation function option invalid, can only be stack or sum.')

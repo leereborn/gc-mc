@@ -2,7 +2,8 @@ from __future__ import print_function
 
 
 from initializations import *
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 
 # global unique layer ID dictionary for layer name assignment
 _LAYER_UIDS = {}

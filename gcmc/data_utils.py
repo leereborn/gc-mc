@@ -9,9 +9,9 @@ import scipy.sparse as sp
 import random
 
 # For automatic dataset downloading
-from urllib2 import urlopen
+from urllib.request import urlopen
 from zipfile import ZipFile
-from StringIO import StringIO
+from io import BytesIO
 import shutil
 import os.path
 
@@ -53,7 +53,7 @@ def map_data(data):
     uniq = list(set(data))
 
     id_dict = {old: new for new, old in enumerate(sorted(uniq))}
-    data = np.array(map(lambda x: id_dict[x], data))
+    data = map(lambda x: id_dict[x], data) # map returns an iterator in python3
     n = len(uniq)
 
     return data, id_dict, n
@@ -74,7 +74,7 @@ def download_dataset(dataset, files, data_dir):
         else:
             raise ValueError('Invalid dataset option %s' % dataset)
 
-        with ZipFile(StringIO(request.read())) as zip_ref:
+        with ZipFile(BytesIO(request.read())) as zip_ref:
             zip_ref.extractall('data/')
 
         source = [target_dir + '/' + s for s in os.listdir(target_dir)]
@@ -163,7 +163,7 @@ def load_data(fname, seed=1234, verbose=True):
         u_nodes_ratings, u_dict, num_users = map_data(u_nodes_ratings)
         v_nodes_ratings, v_dict, num_items = map_data(v_nodes_ratings)
 
-        u_nodes_ratings, v_nodes_ratings = u_nodes_ratings.astype(np.int64), v_nodes_ratings.astype(np.int32)
+        u_nodes_ratings, v_nodes_ratings = np.fromiter(u_nodes_ratings,np.int64), np.fromiter(v_nodes_ratings,np.int32)
         ratings = ratings.astype(np.float64)
 
         # Movie features (genres)
@@ -246,7 +246,7 @@ def load_data(fname, seed=1234, verbose=True):
         u_nodes_ratings, u_dict, num_users = map_data(u_nodes_ratings)
         v_nodes_ratings, v_dict, num_items = map_data(v_nodes_ratings)
 
-        u_nodes_ratings, v_nodes_ratings = u_nodes_ratings.astype(np.int64), v_nodes_ratings.astype(np.int64)
+        u_nodes_ratings, v_nodes_ratings = np.fromiter(u_nodes_ratings,np.int64), np.fromiter(v_nodes_ratings,np.int64)
         ratings = ratings.astype(np.float32)
 
         # Load movie features
@@ -337,7 +337,7 @@ def load_data(fname, seed=1234, verbose=True):
         u_nodes_ratings, u_dict, num_users = map_data(u_nodes_ratings)
         v_nodes_ratings, v_dict, num_items = map_data(v_nodes_ratings)
 
-        u_nodes_ratings, v_nodes_ratings = u_nodes_ratings.astype(np.int64), v_nodes_ratings.astype(np.int64)
+        u_nodes_ratings, v_nodes_ratings = np.fromiter(u_nodes_ratings,np.int64), np.fromiter(v_nodes_ratings,np.int64)
         ratings = ratings.astype(np.float32)
 
     else:

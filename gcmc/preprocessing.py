@@ -3,7 +3,7 @@ from __future__ import print_function
 
 import numpy as np
 import scipy.sparse as sp
-import cPickle as pkl
+import pickle as pkl
 import os
 import h5py
 import pandas as pd
@@ -125,8 +125,8 @@ def create_trainvaltest_split(dataset, seed=1234, testing=False, datasplit_path=
     """
 
     if datasplit_from_file and os.path.isfile(datasplit_path):
-        print('Reading dataset splits from file...')
-        with open(datasplit_path) as f:
+        print('Reading dataset splits from fil: {}'.format(datasplit_path))
+        with open(datasplit_path, 'rb') as f:
             num_users, num_items, u_nodes, v_nodes, ratings, u_features, v_features = pkl.load(f)
 
         if verbose:
@@ -139,7 +139,7 @@ def create_trainvaltest_split(dataset, seed=1234, testing=False, datasplit_path=
         num_users, num_items, u_nodes, v_nodes, ratings, u_features, v_features = load_data(dataset, seed=seed,
                                                                                             verbose=verbose)
 
-        with open(datasplit_path, 'w') as f:
+        with open(datasplit_path, 'wb') as f:
             pkl.dump([num_users, num_items, u_nodes, v_nodes, ratings, u_features, v_features], f)
 
     neutral_rating = -1
@@ -269,7 +269,7 @@ def load_data_monti(dataset, testing=False):
     idx_nonzero_test = np.array([u * num_items + v for u, v in pairs_nonzero_test])
 
     # Internally shuffle training set (before splitting off validation set)
-    rand_idx = range(len(idx_nonzero_train))
+    rand_idx = np.arange(len(idx_nonzero_train))
     np.random.seed(42)
     np.random.shuffle(rand_idx)
     idx_nonzero_train = idx_nonzero_train[rand_idx]
@@ -367,8 +367,9 @@ def load_official_trainvaltest_split(dataset, testing=False):
 
     u_nodes_ratings, u_dict, num_users = map_data(u_nodes_ratings)
     v_nodes_ratings, v_dict, num_items = map_data(v_nodes_ratings)
-
-    u_nodes_ratings, v_nodes_ratings = u_nodes_ratings.astype(np.int64), v_nodes_ratings.astype(np.int32)
+    #print(u_nodes_ratings.shape)
+    #import pdb; pdb.set_trace()
+    u_nodes_ratings, v_nodes_ratings = np.fromiter(u_nodes_ratings,np.int64), np.fromiter(v_nodes_ratings,np.int32)
     ratings = ratings.astype(np.float64)
 
     u_nodes = u_nodes_ratings
@@ -407,7 +408,7 @@ def load_official_trainvaltest_split(dataset, testing=False):
     pairs_nonzero_test = pairs_nonzero[num_train+num_val:]
 
     # Internally shuffle training set (before splitting off validation set)
-    rand_idx = range(len(idx_nonzero_train))
+    rand_idx = np.arange(len(idx_nonzero_train))
     np.random.seed(42)
     np.random.shuffle(rand_idx)
     idx_nonzero_train = idx_nonzero_train[rand_idx]
