@@ -7,11 +7,14 @@ import argparse
 import datetime
 import time
 
-import tensorflow as tf
+#import tensorflow as tf
 import numpy as np
 import scipy.sparse as sp
 import sys
 import json
+
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 
 from preprocessing import create_trainvaltest_split, \
     sparse_to_tuple, preprocess_user_item_features, globally_normalize_bipartite_adjacency, \
@@ -348,6 +351,7 @@ if FEATURES:
                                 accum=ACCUM,
                                 learning_rate=LR,
                                 num_side_features=num_side_features,
+                                attn=ATTN,
                                 logging=True)
 else:
     model = RecommenderGAE(placeholders,
@@ -515,7 +519,7 @@ for _ in range(NUM_EXP):
         print('polyak val rmse = ', val_rmse)
 
     print('\nSETTINGS:\n')
-    for key, val in sorted(vars(ap.parse_args()).iteritems()):
+    for key, val in sorted(vars(ap.parse_args()).items()):
         print(key, val)
 
     print('global seed = ', seed)
