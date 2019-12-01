@@ -50,10 +50,10 @@ ap.add_argument("-fhi", "--feat_hidden", type=int, default=64,
 ap.add_argument("-ac", "--accumulation", type=str, default="sum", choices=['sum', 'stack'],
                 help="Accumulation function: sum or stack.")
 
-ap.add_argument("-do", "--dropout", type=float, default=0.7,
+ap.add_argument("-fdo", "--feed_forward_dropout", type=float, default=0.7,
                 help="Dropout fraction")
 
-ap.add_argument("-ido", "--input_dropout", type=float, default=0.3,
+ap.add_argument("-ado", "--attention_dropout", type=float, default=0.3,
                 help="Dropout fraction")
 
 ap.add_argument("-nb", "--num_basis_functions", type=int, default=2,
@@ -109,8 +109,8 @@ print(args, '\n')
 DATASET = args['dataset']
 DATASEED = args['data_seed']
 NB_EPOCH = args['epochs']
-DO = args['dropout']
-IDO = args['input_dropout']
+FDO = args['feed_forward_dropout']
+ADO = args['attention_dropout']
 HIDDEN = args['hidden']
 FEATHIDDEN = args['feat_hidden']
 BASES = args['num_basis_functions']
@@ -325,8 +325,8 @@ placeholders = {
 
     'class_values': tf.placeholder(tf.float32, shape=class_values.shape),
 
-    'input_dropout': tf.placeholder_with_default(0., shape=()),
-    'dropout': tf.placeholder_with_default(0., shape=()),
+    'ffd_drop': tf.placeholder_with_default(0., shape=()),
+    'attn_drop': tf.placeholder_with_default(0., shape=()),
     'weight_decay': tf.placeholder_with_default(0., shape=()),
 
     'support': tf.sparse_placeholder(tf.float32, shape=(None, None)),
@@ -390,7 +390,7 @@ v_features_nonzero = v_features[1].shape[0]
 # Feed_dicts for validation and test set stay constant over different update steps
 train_feed_dict = construct_feed_dict(placeholders, u_features, v_features, u_features_nonzero,
                                     v_features_nonzero, train_support, train_support_t,
-                                    train_labels, train_u_indices, train_v_indices, class_values, IDO, DO, train_u, train_v,
+                                    train_labels, train_u_indices, train_v_indices, class_values, FDO, ADO, train_u, train_v,
                                     train_u_features_side, train_v_features_side)
 # No dropout for validation and test runs
 val_feed_dict = construct_feed_dict(placeholders, u_features, v_features, u_features_nonzero,

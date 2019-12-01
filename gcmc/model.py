@@ -100,8 +100,8 @@ class RecommenderGAE(Model):
         self.v_features_nonzero = placeholders['v_features_nonzero']
         self.support = placeholders['support']
         self.support_t = placeholders['support_t']
-        self.input_dropout = placeholders['input_dropout']
-        self.dropout = placeholders['dropout']
+        self.attn_drop = placeholders['attn_drop']
+        self.ffd_drop = placeholders['ffd_drop']
         self.labels = placeholders['labels']
         self.u_indices = placeholders['user_indices']
         self.v_indices = placeholders['item_indices']
@@ -170,7 +170,8 @@ class RecommenderGAE(Model):
                                                  sparse_inputs=True,
                                                  act=tf.nn.relu,
                                                  bias=False,
-                                                 dropout=self.input_dropout,
+                                                 attn_drop=self.attn_drop,
+                                                 ffd_drop = self.ffd_drop,
                                                  logging=self.logging,
                                                  share_user_item_weights=True,
                                                  self_connections=False))
@@ -185,7 +186,7 @@ class RecommenderGAE(Model):
                                                     sparse_inputs=True,
                                                     act=tf.nn.relu,
                                                     bias=False,
-                                                    dropout=self.input_dropout,
+                                                    dropout=self.ffd_drop,
                                                     logging=self.logging,
                                                     share_user_item_weights=True,
                                                     self_connections=False))
@@ -202,7 +203,8 @@ class RecommenderGAE(Model):
                                     v_features_nonzero=self.v_features_nonzero,
                                     sparse_inputs=True,
                                     act=tf.nn.relu,
-                                    input_dropout=self.input_dropout,
+                                    attn_drop=self.attn_drop,
+                                    ffd_drop=self.ffd_drop,
                                     logging=self.logging,
                                     share_user_item_weights=True))
             else:
@@ -215,7 +217,7 @@ class RecommenderGAE(Model):
                                             v_features_nonzero=self.v_features_nonzero,
                                             sparse_inputs=True,
                                             act=tf.nn.relu,
-                                            dropout=self.input_dropout,
+                                            dropout=self.ffd_drop,
                                             logging=self.logging,
                                             share_user_item_weights=True))
                 
@@ -225,7 +227,7 @@ class RecommenderGAE(Model):
         self.layers.append(Dense(input_dim=self.hidden[0],
                                  output_dim=self.hidden[1],
                                  act=lambda x: x,
-                                 dropout=self.dropout,
+                                 dropout=self.ffd_drop,
                                  logging=self.logging,
                                  share_user_item_weights=True))
 
@@ -257,8 +259,8 @@ class RecommenderSideInfoGAE(Model):
         self.v_features_nonzero = placeholders['v_features_nonzero']
         self.support = placeholders['support']
         self.support_t = placeholders['support_t']
-        self.input_dropout = placeholders['input_dropout']
-        self.dropout = placeholders['dropout']
+        self.attn_drop = placeholders['attn_drop']
+        self.ffd_drop = placeholders['ffd_drop']
         self.labels = placeholders['labels']
         self.u_indices = placeholders['user_indices']
         self.v_indices = placeholders['item_indices']
@@ -333,7 +335,8 @@ class RecommenderSideInfoGAE(Model):
                                                  sparse_inputs=True,
                                                  act=tf.nn.relu,
                                                  bias=False,
-                                                 dropout=self.input_dropout,
+                                                 attn_drop=self.attn_drop,
+                                                 ffd_drop=self.ffd_drop,
                                                  logging=self.logging,
                                                  share_user_item_weights=True,
                                                  self_connections=False))
@@ -348,7 +351,7 @@ class RecommenderSideInfoGAE(Model):
                                                     sparse_inputs=True,
                                                     act=tf.nn.relu,
                                                     bias=False,
-                                                    dropout=self.input_dropout,
+                                                    dropout=self.ffd_drop,
                                                     logging=self.logging,
                                                     share_user_item_weights=True,
                                                     self_connections=False))
@@ -365,7 +368,8 @@ class RecommenderSideInfoGAE(Model):
                                     v_features_nonzero=self.v_features_nonzero,
                                     sparse_inputs=True,
                                     act=tf.nn.relu,
-                                    input_dropout=self.input_dropout,
+                                    attn_drop=self.attn_drop,
+                                    ffd_drop=self.ffd_drop,
                                     logging=self.logging,
                                     share_user_item_weights=True))
             else:
@@ -378,7 +382,7 @@ class RecommenderSideInfoGAE(Model):
                                             v_features_nonzero=self.v_features_nonzero,
                                             sparse_inputs=True,
                                             act=tf.nn.relu,
-                                            dropout=self.input_dropout,
+                                            dropout=self.ffd_drop,
                                             logging=self.logging,
                                             share_user_item_weights=True))
 
@@ -396,7 +400,7 @@ class RecommenderSideInfoGAE(Model):
         self.layers.append(Dense(input_dim=self.hidden[0]+self.feat_hidden_dim,
                                  output_dim=self.hidden[1],
                                  act=lambda x: x,
-                                 dropout=self.dropout,
+                                 dropout=self.ffd_drop,
                                  logging=self.logging,
                                  share_user_item_weights=False))
 

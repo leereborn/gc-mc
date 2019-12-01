@@ -233,7 +233,7 @@ class AttentionalStackGCN(Layer):
     """Graph convolution layer for bipartite graphs and sparse inputs."""
 
     def __init__(self, list_u, list_v,input_dim, output_dim, support, support_t, num_support, u_features_nonzero=None,
-                 v_features_nonzero=None, sparse_inputs=False, input_dropout=0.,
+                 v_features_nonzero=None, sparse_inputs=False, ffd_drop=0., attn_drop=0.,
                  act=tf.nn.relu, share_user_item_weights=True, **kwargs):
         super(AttentionalStackGCN, self).__init__(**kwargs) #What does this do?
 
@@ -261,7 +261,8 @@ class AttentionalStackGCN(Layer):
         self.attn_weights_u = tf.split(value=self.vars['attn_weights_0'], axis=0, num_or_size_splits=num_support)
         self.attn_weights_v = tf.split(value=self.vars['attn_weights_1'], axis=0, num_or_size_splits=num_support)
 
-        self.dropout = input_dropout
+        self.ffd_drop = ffd_drop
+        self.attn_drop = attn_drop
 
         self.sparse_inputs = sparse_inputs #sparse or cold start
         self.u_features_nonzero = u_features_nonzero
@@ -286,11 +287,11 @@ class AttentionalStackGCN(Layer):
         x_v = inputs[1]
         '''
         if self.sparse_inputs:
-            x_u_d = dropout_sparse(x_u, 1 - self.dropout, self.u_features_nonzero) 
-            x_v_d = dropout_sparse(x_v, 1 - self.dropout, self.v_features_nonzero)
+            x_u_d = dropout_sparse(x_u, 1 - self.ffd_drop, self.u_features_nonzero) 
+            x_v_d = dropout_sparse(x_v, 1 - self.ffd_drop, self.v_features_nonzero)
         else:
-            x_u_d = tf.nn.dropout(x_u, 1 - self.dropout) # Is this consistent with the paper? 
-            x_v_d = tf.nn.dropout(x_v, 1 - self.dropout)
+            x_u_d = tf.nn.dropout(x_u, 1 - self.ffd_drop) # Is this consistent with the paper? 
+            x_v_d = tf.nn.dropout(x_v, 1 - self.ffd_drop)
         '''
         supports_u = [] # support is basically adjacent matrix of a certain rating.
         supports_v = []
@@ -329,15 +330,11 @@ class AttentionalStackGCN(Layer):
             attn_coef_v = tf.nn.softmax(attn_coef_v)
 
             # Apply dropout
-            tmp_u = tf.nn.dropout(tmp_u,rate=self.dropout)
-            tmp_v = tf.nn.dropout(tmp_v,rate=self.dropout)
-            attn_coef_u = tf.nn.dropout(attn_coef_u,rate=self.dropout)
-            attn_coef_v = tf.nn.dropout(attn_coef_v,rate=self.dropout)
+            #tmp_u = tf.nn.dropout(tmp_u,rate=self.ffd_drop)
+            #tmp_v = tf.nn.dropout(tmp_v,rate=self.ffd_drop)
+            attn_coef_u = tf.nn.dropout(attn_coef_u,rate=self.attn_drop)
+            attn_coef_v = tf.nn.dropout(attn_coef_v,rate=self.attn_drop)
             
-            #tmp_u_d = dot(x_u_d, self.weights_u[i], sparse=self.sparse_inputs)
-            #tmp_v_d = dot(x_v_d, self.weights_v[i], sparse=self.sparse_inputs)
-            #supports_u.append(tf.linalg.matmul(attn_coef_u, tmp_v_d))
-            #supports_v.append(tf.linalg.matmul(attn_coef_v, tmp_u_d))
             supports_u.append(tf.linalg.matmul(attn_coef_u, tmp_v))
             supports_v.append(tf.linalg.matmul(attn_coef_v, tmp_u))
 
@@ -506,7 +503,7 @@ class AttentionalOrdinalMixtureGCN(Layer): # Section 2.7 Weight sharing
     """Graph convolution layer for bipartite graphs and sparse inputs."""
 
     def __init__(self, list_u, list_v, input_dim, output_dim, support, support_t, num_support, u_features_nonzero=None,
-                 v_features_nonzero=None, sparse_inputs=False, dropout=0.,
+                 v_features_nonzero=None, sparse_inputs=False, attn_drop=0., ffd_drop=0.,
                  act=tf.nn.relu, bias=False, share_user_item_weights=False, self_connections=False, **kwargs):
         super(AttentionalOrdinalMixtureGCN, self).__init__(**kwargs)
         #print(input_dim, output_dim) # (None, 500)
@@ -541,7 +538,8 @@ class AttentionalOrdinalMixtureGCN(Layer): # Section 2.7 Weight sharing
         self.weights_u = self.vars['weights_u']
         self.weights_v = self.vars['weights_v']
 
-        self.dropout = dropout
+        self.attn_drop = attn_drop
+        self.ffd_drop = ffd_drop
 
         self.sparse_inputs = sparse_inputs
         self.u_features_nonzero = u_features_nonzero
@@ -655,10 +653,10 @@ class AttentionalOrdinalMixtureGCN(Layer): # Section 2.7 Weight sharing
             attn_coef_v = tf.nn.softmax(attn_coef_v)
 
             # Apply dropout
-            tmp_u = tf.nn.dropout(tmp_u,rate=self.dropout)
-            tmp_v = tf.nn.dropout(tmp_v,rate=self.dropout)
-            attn_coef_u = tf.nn.dropout(attn_coef_u,rate=self.dropout)
-            attn_coef_v = tf.nn.dropout(attn_coef_v,rate=self.dropout)
+            tmp_u = tf.nn.dropout(tmp_u,rate=self.ffd_drop)
+            tmp_v = tf.nn.dropout(tmp_v,rate=self.ffd_drop)
+            attn_coef_u = tf.nn.dropout(attn_coef_u,rate=self.attn_drop)
+            attn_coef_v = tf.nn.dropout(attn_coef_v,rate=self.attn_drop)
             # then multiply with rating matrices
             supports_u.append(tf.linalg.matmul(attn_coef_u, tmp_v))
             supports_v.append(tf.linalg.matmul(attn_coef_v, tmp_u))

@@ -4,8 +4,8 @@ import numpy as np
 
 
 def construct_feed_dict(placeholders, u_features, v_features, u_features_nonzero, v_features_nonzero,
-                        support, support_t, labels, u_indices, v_indices, class_values, input_dropout,
-                        dropout, list_u, list_v, u_features_side=None, v_features_side=None):
+                        support, support_t, labels, u_indices, v_indices, class_values, ffd_drop,
+                        attn_drop, list_u, list_v, u_features_side=None, v_features_side=None):
     """
     Function that creates feed dictionary when running tensorflow sessions.
     """
@@ -22,8 +22,8 @@ def construct_feed_dict(placeholders, u_features, v_features, u_features_nonzero
     feed_dict.update({placeholders['user_indices']: u_indices})
     feed_dict.update({placeholders['item_indices']: v_indices})
 
-    feed_dict.update({placeholders['dropout']: dropout})
-    feed_dict.update({placeholders['input_dropout']: input_dropout})
+    feed_dict.update({placeholders['ffd_drop']: ffd_drop})
+    feed_dict.update({placeholders['attn_drop']: attn_drop})
     feed_dict.update({placeholders['class_values']: class_values})
 
     feed_dict.update({placeholders['list_u']: list_u})
