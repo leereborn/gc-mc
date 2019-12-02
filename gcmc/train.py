@@ -184,9 +184,10 @@ num_side_features = 0
 
 # feature loading
 if not FEATURES:
-    u_features = sp.identity(num_users, format='csr')
-    v_features = sp.identity(num_items, format='csr')
-
+    u_features = sp.identity(num_users, format='csr') # (943,943)
+    v_features = sp.identity(num_items, format='csr') # (1682,1682)
+    
+    #(943,2625) (1682,2625) Make colum dim same so that the weights can be shared between feature_u and feature_v.
     u_features, v_features = preprocess_user_item_features(u_features, v_features)
 
 elif FEATURES and u_features is not None and v_features is not None:
