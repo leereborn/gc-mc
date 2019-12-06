@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "args": ["-d", "ml_100k", "--accum", "stack", "-ado", "0.7", "-fdo", "0.7", "-nleft", "-nb", "2", "-e", "1000", "--testing"]
+            "args": ["-d", "ml_100k", "--accum", "stack", "-ado", "0.7", "-fdo", "0.7", "-nleft", "-nb", "2", "-e", "1000", "--testing", "-fi", "node", "--features"]
         }
     ]
 }

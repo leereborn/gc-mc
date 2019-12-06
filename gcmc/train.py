@@ -19,7 +19,7 @@ tf.disable_v2_behavior()
 from preprocessing import create_trainvaltest_split, \
     sparse_to_tuple, preprocess_user_item_features, globally_normalize_bipartite_adjacency, \
     load_data_monti, load_official_trainvaltest_split, normalize_features
-from model import RecommenderGAE, RecommenderSideInfoGAE
+from model import RecommenderGAE, RecommenderSideInfoGAE, RecommenderNodeFeatGAE
 from utils import construct_feed_dict
 
 #tf.enable_eager_execution()
@@ -65,6 +65,8 @@ ap.add_argument("-ds", "--data_seed", type=int, default=1234,
 
 ap.add_argument("-sdir", "--summaries_dir", type=str, default='logs/' + str(datetime.datetime.now()).replace(' ', '_'),
                 help="Directory for saving tensorflow summaries.")
+
+ap.add_argument("-fi", "--feature_info", type=str, default="side", choices=["side","node"], help="Inject feature info todense layer or input nodes")
 
 # Boolean flags
 fp = ap.add_mutually_exclusive_group(required=False)
@@ -125,6 +127,7 @@ ATTN = args['attention']
 ATTN_REG = args['attention_weights_regularization']
 WRF = args['write_file']
 NUM_EXP = args['num_experiments']
+FEAT_INFO = args['feature_info']
 
 SELFCONNECTIONS = False # Look into this! potential config to add self loop for each node!
 SPLITFROMFILE = True
@@ -261,8 +264,8 @@ test_v_dict = {n: i for i, n in enumerate(test_v)}
 test_u_indices = np.array([test_u_dict[o] for o in test_u_indices])
 test_v_indices = np.array([test_v_dict[o] for o in test_v_indices])
 
-test_support = support[np.array(test_u)]
-test_support_t = support_t[np.array(test_v)]
+test_support = support[np.array(test_u)] #(459, 1682*5)
+test_support_t = support_t[np.array(test_v)] #(1410, 943*5)
 
 # Collect all user and item nodes for validation set
 val_u = list(set(val_u_indices))
@@ -273,8 +276,8 @@ val_v_dict = {n: i for i, n in enumerate(val_v)}
 val_u_indices = np.array([val_u_dict[o] for o in val_u_indices])
 val_v_indices = np.array([val_v_dict[o] for o in val_v_indices])
 
-val_support = support[np.array(val_u)]
-val_support_t = support_t[np.array(val_v)]
+val_support = support[np.array(val_u)] #(933, 1682*5)
+val_support_t = support_t[np.array(val_v)] #(1351, 943*5)
 
 # Collect all user and item nodes for train set
 train_u = list(set(train_u_indices)) #remove duplicates
@@ -285,21 +288,31 @@ train_v_dict = {n: i for i, n in enumerate(train_v)}
 train_u_indices = np.array([train_u_dict[o] for o in train_u_indices])
 train_v_indices = np.array([train_v_dict[o] for o in train_v_indices])
 
-train_support = support[np.array(train_u)]
-train_support_t = support_t[np.array(train_v)]
+train_support = support[np.array(train_u)] #(943,1682*5)
+train_support_t = support_t[np.array(train_v)] #(1650,943*5)
 
 #print(train_support_t.shape)#(1650, 4715)
 #import pdb;pdb.set_trace()
 # features as side info
 if FEATURES:
-    test_u_features_side = u_features_side[np.array(test_u)]
-    test_v_features_side = v_features_side[np.array(test_v)]
+    if FEAT_INFO == 'side':
+        test_u_features_side = u_features_side[np.array(test_u)]
+        test_v_features_side = v_features_side[np.array(test_v)]
 
-    val_u_features_side = u_features_side[np.array(val_u)]
-    val_v_features_side = v_features_side[np.array(val_v)]
+        val_u_features_side = u_features_side[np.array(val_u)]
+        val_v_features_side = v_features_side[np.array(val_v)]
 
-    train_u_features_side = u_features_side[np.array(train_u)]
-    train_v_features_side = v_features_side[np.array(train_v)]
+        train_u_features_side = u_features_side[np.array(train_u)]
+        train_v_features_side = v_features_side[np.array(train_v)]
+    elif FEAT_INFO == 'node':
+        test_u_features_side = u_features_side
+        test_v_features_side = v_features_side
+
+        val_u_features_side = u_features_side
+        val_v_features_side = v_features_side
+
+        train_u_features_side = u_features_side
+        train_v_features_side = v_features_side
 
 else:
     test_u_features_side = None
@@ -339,7 +352,8 @@ placeholders = {
 
 # create model
 if FEATURES:
-    model = RecommenderSideInfoGAE(placeholders,
+    if FEAT_INFO == 'side':
+        model = RecommenderSideInfoGAE(placeholders,
                                 input_dim=u_features.shape[1],
                                 feat_hidden_dim=FEATHIDDEN,
                                 num_classes=NUMCLASSES,
@@ -354,6 +368,24 @@ if FEATURES:
                                 num_side_features=num_side_features,
                                 attn=ATTN,
                                 logging=True)
+    elif FEAT_INFO == 'node':
+        model = RecommenderNodeFeatGAE(placeholders,
+                                input_dim=u_features.shape[1],
+                                feat_hidden_dim=FEATHIDDEN,
+                                num_classes=NUMCLASSES,
+                                num_support=num_support,
+                                self_connections=SELFCONNECTIONS,
+                                num_basis_functions=BASES,
+                                hidden=HIDDEN,
+                                num_users=num_users,
+                                num_items=num_items,
+                                accum=ACCUM,
+                                learning_rate=LR,
+                                num_side_features=num_side_features,
+                                attn=ATTN,
+                                logging=True)
+    else:
+        raise ValueError('Feature info has to be either node or side')
 else:
     model = RecommenderGAE(placeholders,
                         input_dim=u_features.shape[1],

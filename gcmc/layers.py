@@ -207,7 +207,7 @@ class StackGCN(Layer): # accum resorts to stack
             support = self.support[i]
             support_transpose = self.support_transpose[i]
 
-            supports_u.append(tf.sparse_tensor_dense_matmul(support, tmp_v)) # what about normalization D_inverse in Eq 8?
+            supports_u.append(tf.sparse_tensor_dense_matmul(support, tmp_v))
             supports_v.append(tf.sparse_tensor_dense_matmul(support_transpose, tmp_u))
 
         z_u = tf.concat(axis=1, values=supports_u) # The summation in Eq. 8 is replaced by concatenation.

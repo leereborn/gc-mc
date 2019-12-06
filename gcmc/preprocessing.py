@@ -367,8 +367,7 @@ def load_official_trainvaltest_split(dataset, testing=False):
 
     u_nodes_ratings, u_dict, num_users = map_data(u_nodes_ratings)
     v_nodes_ratings, v_dict, num_items = map_data(v_nodes_ratings)
-    #print(u_nodes_ratings.shape)
-    #import pdb; pdb.set_trace()
+    
     u_nodes_ratings, v_nodes_ratings = np.fromiter(u_nodes_ratings,np.int64), np.fromiter(v_nodes_ratings,np.int32)
     ratings = ratings.astype(np.float64)
 
