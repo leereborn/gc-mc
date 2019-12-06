@@ -244,7 +244,6 @@ class RecommenderGAE(Model):
                                            logging=self.logging,
                                            diagonal=False))
 
-
 class RecommenderSideInfoGAE(Model):
     def __init__(self,  placeholders, input_dim, feat_hidden_dim, num_classes, num_support,
                  learning_rate, num_basis_functions, hidden, num_users, num_items, accum,
@@ -399,7 +398,7 @@ class RecommenderSideInfoGAE(Model):
 
         self.layers.append(Dense(input_dim=self.hidden[0]+self.feat_hidden_dim,
                                  output_dim=self.hidden[1],
-                                 act=lambda x: x,
+                                 act=lambda x: x, # why dense layer has no activation function?
                                  dropout=self.ffd_drop,
                                  logging=self.logging,
                                  share_user_item_weights=False))
@@ -464,3 +463,167 @@ class RecommenderSideInfoGAE(Model):
         self._accuracy()
 
         self.opt_op = self.optimizer.minimize(self.loss, global_step=self.global_step)
+
+class RecommenderNodeFeatGAE(Model):
+    def __init__(self,  placeholders, input_dim, feat_hidden_dim, num_classes, num_support,
+                 learning_rate, num_basis_functions, hidden, num_users, num_items, accum,
+                 num_side_features, attn, self_connections=False, **kwargs):
+        super(RecommenderNodeFeatGAE, self).__init__(**kwargs)
+
+        self.inputs = (placeholders['u_features_side'], placeholders['v_features_side'])
+        #self.u_features_side = placeholders['u_features_side']
+        #self.v_features_side = placeholders['v_features_side']
+
+        self.u_features_nonzero = placeholders['u_features_nonzero']
+        self.v_features_nonzero = placeholders['v_features_nonzero']
+        self.support = placeholders['support']
+        self.support_t = placeholders['support_t']
+        self.attn_drop = placeholders['attn_drop']
+        self.ffd_drop = placeholders['ffd_drop']
+        self.labels = placeholders['labels']
+        self.u_indices = placeholders['user_indices']
+        self.v_indices = placeholders['item_indices']
+        self.class_values = placeholders['class_values']
+
+        self.list_u = placeholders['list_u']
+        self.list_v = placeholders['list_v']
+
+        #self.num_side_features = num_side_features
+        #self.feat_hidden_dim = feat_hidden_dim
+        #if num_side_features > 0:
+        #    self.u_features_side = placeholders['u_features_side']
+        #    self.v_features_side = placeholders['v_features_side']
+
+        #else:
+        #    self.u_features_side = None
+        #    self.v_features_side = None
+
+        self.hidden = hidden
+        self.num_basis_functions = num_basis_functions
+        self.num_classes = num_classes
+        self.num_support = num_support
+        self.input_dim = num_side_features
+        self.self_connections = self_connections
+        self.num_users = num_users
+        self.num_items = num_items
+        self.accum = accum
+        self.learning_rate = learning_rate
+
+        self.attn = attn
+
+        # standard settings: beta1=0.9, beta2=0.999, epsilon=1.e-8
+        self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate, beta1=0.9, beta2=0.999, epsilon=1.e-8)
+
+        self.build()
+
+        moving_average_decay = 0.995
+        self.variable_averages = tf.train.ExponentialMovingAverage(moving_average_decay, self.global_step)
+        self.variables_averages_op = self.variable_averages.apply(tf.trainable_variables())
+
+        with tf.control_dependencies([self.opt_op]):
+            self.training_op = tf.group(self.variables_averages_op)
+
+        self.embeddings = self.activations[0]
+
+        self._rmse()
+
+    def _loss(self):
+        self.loss += softmax_cross_entropy(self.outputs, self.labels)
+
+        tf.summary.scalar('loss', self.loss)
+
+    def _accuracy(self):
+        self.accuracy = softmax_accuracy(self.outputs, self.labels)
+
+    def _rmse(self):
+        self.rmse = expected_rmse(self.outputs, self.labels, self.class_values)
+
+        tf.summary.scalar('rmse_score', self.rmse)
+
+    def _build(self):
+        if self.accum == 'sum':
+            if self.attn:
+                self.layers.append(AttentionalOrdinalMixtureGCN(list_u=self.list_u, list_v=self.list_v,
+                                                 input_dim=self.input_dim,
+                                                 output_dim=self.hidden[0],
+                                                 support=self.support,
+                                                 support_t=self.support_t,
+                                                 num_support=self.num_support,
+                                                 u_features_nonzero=self.u_features_nonzero, # this is for the sparse input
+                                                 v_features_nonzero=self.v_features_nonzero,
+                                                 sparse_inputs=False,
+                                                 act=tf.nn.relu,
+                                                 bias=False,
+                                                 attn_drop=self.attn_drop,
+                                                 ffd_drop=self.ffd_drop,
+                                                 logging=self.logging,
+                                                 share_user_item_weights=True,
+                                                 self_connections=False))
+            else:
+                self.layers.append(OrdinalMixtureGCN(input_dim=self.input_dim,
+                                                    output_dim=self.hidden[0],
+                                                    support=self.support,
+                                                    support_t=self.support_t,
+                                                    num_support=self.num_support,
+                                                    u_features_nonzero=self.u_features_nonzero,
+                                                    v_features_nonzero=self.v_features_nonzero,
+                                                    sparse_inputs=False,
+                                                    act=tf.nn.relu,
+                                                    bias=False,
+                                                    dropout=self.ffd_drop,
+                                                    logging=self.logging,
+                                                    share_user_item_weights=True,
+                                                    self_connections=False))
+
+        elif self.accum == 'stack':
+            if self.attn:
+                self.layers.append(AttentionalStackGCN(list_u=self.list_u, list_v=self.list_v, 
+                                    input_dim=self.input_dim,
+                                    output_dim=self.hidden[0],
+                                    support=self.support,
+                                    support_t=self.support_t,
+                                    num_support=self.num_support,
+                                    u_features_nonzero=self.u_features_nonzero,
+                                    v_features_nonzero=self.v_features_nonzero,
+                                    sparse_inputs=False,
+                                    act=tf.nn.relu,
+                                    attn_drop=self.attn_drop,
+                                    ffd_drop=self.ffd_drop,
+                                    logging=self.logging,
+                                    share_user_item_weights=True))
+            else:
+                self.layers.append(StackGCN(input_dim=self.input_dim,
+                                            output_dim=self.hidden[0],
+                                            support=self.support,
+                                            support_t=self.support_t,
+                                            num_support=self.num_support,
+                                            u_features_nonzero=self.u_features_nonzero,
+                                            v_features_nonzero=self.v_features_nonzero,
+                                            sparse_inputs=False,
+                                            act=tf.nn.relu,
+                                            dropout=self.ffd_drop,
+                                            logging=self.logging,
+                                            share_user_item_weights=True))
+
+        else:
+            raise ValueError('accumulation function option invalid, can only be stack or sum.')
+
+        self.layers.append(Dense(input_dim=self.hidden[0],
+                                 output_dim=self.hidden[1],
+                                 act=lambda x: x,
+                                 dropout=self.ffd_drop,
+                                 logging=self.logging,
+                                 share_user_item_weights=False))
+
+        self.layers.append(BilinearMixture(num_classes=self.num_classes,
+                                           u_indices=self.u_indices,
+                                           v_indices=self.v_indices,
+                                           input_dim=self.hidden[1],
+                                           num_users=self.num_users,
+                                           num_items=self.num_items,
+                                           user_item_bias=False,
+                                           dropout=0.,
+                                           act=lambda x: x,
+                                           num_weights=self.num_basis_functions,
+                                           logging=self.logging,
+                                           diagonal=False))
