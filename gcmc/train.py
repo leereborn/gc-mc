@@ -199,8 +199,8 @@ elif FEATURES and u_features is not None and v_features is not None:
 
     u_features_side, v_features_side = preprocess_user_item_features(u_features_side, v_features_side)
 
-    u_features_side = np.array(u_features_side.todense(), dtype=np.float32)
-    v_features_side = np.array(v_features_side.todense(), dtype=np.float32)
+    u_features_side = np.array(u_features_side.todense(), dtype=np.float32) #(943,41)
+    v_features_side = np.array(v_features_side.todense(), dtype=np.float32) #(1628,41)
 
     num_side_features = u_features_side.shape[1]
 
