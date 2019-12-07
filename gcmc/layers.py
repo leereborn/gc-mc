@@ -151,7 +151,7 @@ class StackGCN(Layer): # accum resorts to stack
     """Graph convolution layer for bipartite graphs and sparse inputs."""
 
     def __init__(self, input_dim, output_dim, support, support_t, num_support, u_features_nonzero=None,
-                 v_features_nonzero=None, sparse_inputs=False, dropout=0.,
+                 v_features_nonzero=None, sparse_inputs=False, in_drop=0., dropout=0.,
                  act=tf.nn.relu, share_user_item_weights=True, **kwargs):
         super(StackGCN, self).__init__(**kwargs)
 
@@ -170,6 +170,7 @@ class StackGCN(Layer): # accum resorts to stack
         self.weights_v = tf.split(value=self.vars['weights_v'], axis=1, num_or_size_splits=num_support)
 
         self.dropout = dropout
+        self.in_drop = in_drop
 
         self.sparse_inputs = sparse_inputs #sparse or cold start
         self.u_features_nonzero = u_features_nonzero
@@ -191,11 +192,11 @@ class StackGCN(Layer): # accum resorts to stack
         x_v = inputs[1]
 
         if self.sparse_inputs:
-            x_u = dropout_sparse(x_u, 1 - self.dropout, self.u_features_nonzero)
-            x_v = dropout_sparse(x_v, 1 - self.dropout, self.v_features_nonzero)
+            x_u = dropout_sparse(x_u, 1 - self.in_drop, self.u_features_nonzero)
+            x_v = dropout_sparse(x_v, 1 - self.in_drop, self.v_features_nonzero)
         else:
-            x_u = tf.nn.dropout(x_u, 1 - self.dropout)
-            x_v = tf.nn.dropout(x_v, 1 - self.dropout)
+            x_u = tf.nn.dropout(x_u, 1 - self.in_drop)
+            x_v = tf.nn.dropout(x_v, 1 - self.in_drop)
 
         supports_u = []
         supports_v = []
@@ -285,14 +286,14 @@ class AttentionalStackGCN(Layer):
     def _call(self, inputs):
         x_u = inputs[0]
         x_v = inputs[1]
-        '''
+        
         if self.sparse_inputs:
-            x_u_d = dropout_sparse(x_u, 1 - self.ffd_drop, self.u_features_nonzero) 
-            x_v_d = dropout_sparse(x_v, 1 - self.ffd_drop, self.v_features_nonzero)
+            x_u_d = dropout_sparse(x_u, 1 - self.attn_drop, self.u_features_nonzero) 
+            x_v_d = dropout_sparse(x_v, 1 - self.attn_drop, self.v_features_nonzero)
         else:
-            x_u_d = tf.nn.dropout(x_u, 1 - self.ffd_drop) # Is this consistent with the paper? 
-            x_v_d = tf.nn.dropout(x_v, 1 - self.ffd_drop)
-        '''
+            x_u_d = tf.nn.dropout(x_u, 1 - self.attn_drop) # Is this consistent with the paper? 
+            x_v_d = tf.nn.dropout(x_v, 1 - self.attn_drop)
+        
         supports_u = [] # support is basically adjacent matrix of a certain rating.
         supports_v = []
 
@@ -332,8 +333,8 @@ class AttentionalStackGCN(Layer):
             # Apply dropout
             #tmp_u = tf.nn.dropout(tmp_u,rate=self.ffd_drop)
             #tmp_v = tf.nn.dropout(tmp_v,rate=self.ffd_drop)
-            attn_coef_u = tf.nn.dropout(attn_coef_u,rate=self.attn_drop)
-            attn_coef_v = tf.nn.dropout(attn_coef_v,rate=self.attn_drop)
+            #attn_coef_u = tf.nn.dropout(attn_coef_u,rate=self.attn_drop)
+            #attn_coef_v = tf.nn.dropout(attn_coef_v,rate=self.attn_drop)
             
             supports_u.append(tf.linalg.matmul(attn_coef_u, tmp_v))
             supports_v.append(tf.linalg.matmul(attn_coef_v, tmp_u))
@@ -362,7 +363,7 @@ class OrdinalMixtureGCN(Layer): # Section 2.7 Weight sharing
     """Graph convolution layer for bipartite graphs and sparse inputs."""
 
     def __init__(self, input_dim, output_dim, support, support_t, num_support, u_features_nonzero=None,
-                 v_features_nonzero=None, sparse_inputs=False, dropout=0.,
+                 v_features_nonzero=None, sparse_inputs=False, in_drop=0., dropout=0.,
                  act=tf.nn.relu, bias=False, share_user_item_weights=False, self_connections=False, **kwargs):
         super(OrdinalMixtureGCN, self).__init__(**kwargs)
 
@@ -392,6 +393,7 @@ class OrdinalMixtureGCN(Layer): # Section 2.7 Weight sharing
         self.weights_v = self.vars['weights_v']
 
         self.dropout = dropout
+        self.in_drop = in_drop
 
         self.sparse_inputs = sparse_inputs
         self.u_features_nonzero = u_features_nonzero
@@ -440,11 +442,11 @@ class OrdinalMixtureGCN(Layer): # Section 2.7 Weight sharing
     def _call(self, inputs):
 
         if self.sparse_inputs:
-            x_u = dropout_sparse(inputs[0], 1 - self.dropout, self.u_features_nonzero)
-            x_v = dropout_sparse(inputs[1], 1 - self.dropout, self.v_features_nonzero)
+            x_u = dropout_sparse(inputs[0], 1 - self.in_drop, self.u_features_nonzero)
+            x_v = dropout_sparse(inputs[1], 1 - self.in_drop, self.v_features_nonzero)
         else:
-            x_u = tf.nn.dropout(inputs[0], 1 - self.dropout)
-            x_v = tf.nn.dropout(inputs[1], 1 - self.dropout)
+            x_u = tf.nn.dropout(inputs[0], 1 - self.in_drop)
+            x_v = tf.nn.dropout(inputs[1], 1 - self.in_drop)
 
         supports_u = []
         supports_v = []

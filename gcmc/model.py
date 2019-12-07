@@ -88,7 +88,6 @@ class Model(object):
         saver.restore(sess, save_path)
         print("Model restored from file: %s" % save_path)
 
-
 class RecommenderGAE(Model):
     def __init__(self, placeholders, input_dim, num_classes, num_support,
                  learning_rate, num_basis_functions, hidden, num_users, num_items, accum, attn_weights_regularization, attn,
@@ -186,6 +185,7 @@ class RecommenderGAE(Model):
                                                     sparse_inputs=True,
                                                     act=tf.nn.relu,
                                                     bias=False,
+                                                    in_drop=self.attn_drop,
                                                     dropout=self.ffd_drop,
                                                     logging=self.logging,
                                                     share_user_item_weights=True,
@@ -217,6 +217,7 @@ class RecommenderGAE(Model):
                                             v_features_nonzero=self.v_features_nonzero,
                                             sparse_inputs=True,
                                             act=tf.nn.relu,
+                                            in_drop=self.attn_drop,
                                             dropout=self.ffd_drop,
                                             logging=self.logging,
                                             share_user_item_weights=True))
@@ -350,6 +351,7 @@ class RecommenderSideInfoGAE(Model):
                                                     sparse_inputs=True,
                                                     act=tf.nn.relu,
                                                     bias=False,
+                                                    in_drop=self.attn_drop,
                                                     dropout=self.ffd_drop,
                                                     logging=self.logging,
                                                     share_user_item_weights=True,
@@ -381,6 +383,7 @@ class RecommenderSideInfoGAE(Model):
                                             v_features_nonzero=self.v_features_nonzero,
                                             sparse_inputs=True,
                                             act=tf.nn.relu,
+                                            in_drop=self.attn_drop,
                                             dropout=self.ffd_drop,
                                             logging=self.logging,
                                             share_user_item_weights=True))
@@ -570,6 +573,7 @@ class RecommenderNodeFeatGAE(Model):
                                                     sparse_inputs=False,
                                                     act=tf.nn.relu,
                                                     bias=False,
+                                                    in_drop=self.attn_drop,
                                                     dropout=self.ffd_drop,
                                                     logging=self.logging,
                                                     share_user_item_weights=True,
@@ -601,6 +605,7 @@ class RecommenderNodeFeatGAE(Model):
                                             v_features_nonzero=self.v_features_nonzero,
                                             sparse_inputs=False,
                                             act=tf.nn.relu,
+                                            in_drop=self.attn_drop,
                                             dropout=self.ffd_drop,
                                             logging=self.logging,
                                             share_user_item_weights=True))
