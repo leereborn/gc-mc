@@ -361,8 +361,8 @@ def load_official_trainvaltest_split(dataset, testing=False):
 
     data_array = np.concatenate([data_array_train, data_array_test], axis=0)
 
-    u_nodes_ratings = data_array[:, 0].astype(dtypes['u_nodes'])
-    v_nodes_ratings = data_array[:, 1].astype(dtypes['v_nodes'])
+    u_nodes_ratings = data_array[:, 0].astype(dtypes['u_nodes'])# user id
+    v_nodes_ratings = data_array[:, 1].astype(dtypes['v_nodes'])# item id
     ratings = data_array[:, 2].astype(dtypes['ratings'])
 
     u_nodes_ratings, u_dict, num_users = map_data(u_nodes_ratings)
@@ -371,8 +371,8 @@ def load_official_trainvaltest_split(dataset, testing=False):
     u_nodes_ratings, v_nodes_ratings = np.fromiter(u_nodes_ratings,np.int64), np.fromiter(v_nodes_ratings,np.int32)
     ratings = ratings.astype(np.float64)
 
-    u_nodes = u_nodes_ratings
-    v_nodes = v_nodes_ratings
+    u_nodes = u_nodes_ratings # (100000,)
+    v_nodes = v_nodes_ratings # (100000,)
 
     neutral_rating = -1  # int(np.ceil(np.float(num_classes)/2.)) - 1
 
@@ -380,12 +380,12 @@ def load_official_trainvaltest_split(dataset, testing=False):
     rating_dict = {r: i for i, r in enumerate(np.sort(np.unique(ratings)).tolist())}
 
     labels = np.full((num_users, num_items), neutral_rating, dtype=np.int32)
-    labels[u_nodes, v_nodes] = np.array([rating_dict[r] for r in ratings])
+    labels[u_nodes, v_nodes] = np.array([rating_dict[r] for r in ratings]) # advanced indexing
 
     for i in range(len(u_nodes)):
         assert(labels[u_nodes[i], v_nodes[i]] == rating_dict[ratings[i]])
 
-    labels = labels.reshape([-1])
+    labels = labels.reshape([-1]) #Flatten the rating matrix. (n,)
 
     # number of test and validation edges, see cf-nade code
 
@@ -394,8 +394,8 @@ def load_official_trainvaltest_split(dataset, testing=False):
     num_val = int(np.ceil(num_train * 0.2))
     num_train = num_train - num_val
 
-    pairs_nonzero = np.array([[u, v] for u, v in zip(u_nodes, v_nodes)])
-    idx_nonzero = np.array([u * num_items + v for u, v in pairs_nonzero])
+    pairs_nonzero = np.array([[u, v] for u, v in zip(u_nodes, v_nodes)]) # represents a user/ item pair that has a rating.
+    idx_nonzero = np.array([u * num_items + v for u, v in pairs_nonzero]) # indices for the flattened labels matrix.
 
     for i in range(len(ratings)):
         assert(labels[idx_nonzero[i]] == rating_dict[ratings[i]])
@@ -434,8 +434,10 @@ def load_official_trainvaltest_split(dataset, testing=False):
     train_labels = labels[train_idx]
     val_labels = labels[val_idx]
     test_labels = labels[test_idx]
-    
-    if testing:
+
+    # Because the val set doesn't affect training. Here if not testing, it can be used to detect overfitting.
+    # If testing, then use both train and val data set for training. 
+    if testing:  
         u_train_idx = np.hstack([u_train_idx, u_val_idx])
         v_train_idx = np.hstack([v_train_idx, v_val_idx])
         train_labels = np.hstack([train_labels, val_labels])
@@ -449,6 +451,7 @@ def load_official_trainvaltest_split(dataset, testing=False):
 
     class_values = np.sort(np.unique(ratings))
 
+    # following code creates feature matrices
     if dataset =='ml_100k':
 
         # movie features (genres)
