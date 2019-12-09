@@ -434,7 +434,7 @@ def load_official_trainvaltest_split(dataset, testing=False):
     train_labels = labels[train_idx]
     val_labels = labels[val_idx]
     test_labels = labels[test_idx]
-
+    
     if testing:
         u_train_idx = np.hstack([u_train_idx, u_val_idx])
         v_train_idx = np.hstack([v_train_idx, v_val_idx])
