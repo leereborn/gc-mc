@@ -170,6 +170,12 @@ if DATASET == 'flixster' or DATASET == 'douban' or DATASET == 'yahoo_music':
 
 elif DATASET == 'ml_100k':
     print("Using official MovieLens dataset split u1.base/u1.test with 20% validation set size...")
+    """
+    adj_train(943,1682)
+    train_labels, train_u_indices, train_v_indices (64000,). (80000,) if --testing
+    val_labels, val_u_indices, val_v_indices (16000,)
+    test_labels, test_u_indices, test_v_indices (20000,)
+    """
     u_features, v_features, adj_train, train_labels, train_u_indices, train_v_indices, \
         val_labels, val_u_indices, val_v_indices, test_labels, \
         test_u_indices, test_v_indices, class_values = load_official_trainvaltest_split(DATASET, TESTING)
@@ -289,7 +295,7 @@ train_u_indices = np.array([train_u_dict[o] for o in train_u_indices])
 train_v_indices = np.array([train_v_dict[o] for o in train_v_indices])
 
 train_support = support[np.array(train_u)] #(943,1682*5)
-train_support_t = support_t[np.array(train_v)] #(1650,943*5)
+train_support_t = support_t[np.array(train_v)] #(1650,943*5), without testing (1614,943*5)
 
 #print(train_support_t.shape)#(1650, 4715)
 #import pdb;pdb.set_trace()
