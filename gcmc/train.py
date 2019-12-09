@@ -203,7 +203,7 @@ elif FEATURES and u_features is not None and v_features is not None:
     # use features as side information and node_id's as node input features
 
     print("Normalizing feature vectors...")
-    u_features_side = normalize_features(u_features)
+    u_features_side = normalize_features(u_features) # Normalize features so that each feature sum to 1?
     v_features_side = normalize_features(v_features)
 
     u_features_side, v_features_side = preprocess_user_item_features(u_features_side, v_features_side)
