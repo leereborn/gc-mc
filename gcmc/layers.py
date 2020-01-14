@@ -84,7 +84,6 @@ class Layer(object):
         for var in self.vars:
             tf.summary.histogram(self.name + '/vars/' + var, self.vars[var])
 
-
 class Dense(Layer):
     """Dense layer for two types of nodes in a bipartite graph. """
 
@@ -333,8 +332,10 @@ class AttentionalStackGCN(Layer):
             # Apply dropout
             #tmp_u = tf.nn.dropout(tmp_u,rate=self.ffd_drop)
             #tmp_v = tf.nn.dropout(tmp_v,rate=self.ffd_drop)
-            #attn_coef_u = tf.nn.dropout(attn_coef_u,rate=self.attn_drop)
-            #attn_coef_v = tf.nn.dropout(attn_coef_v,rate=self.attn_drop)
+            #tmp_u = tf.nn.dropout(tmp_u,rate=self.attn_drop)
+            #tmp_v = tf.nn.dropout(tmp_v,rate=self.attn_drop)
+            attn_coef_u = tf.nn.dropout(attn_coef_u,rate=self.attn_drop)
+            attn_coef_v = tf.nn.dropout(attn_coef_v,rate=self.attn_drop)
             
             supports_u.append(tf.linalg.matmul(attn_coef_u, tmp_v))
             supports_v.append(tf.linalg.matmul(attn_coef_v, tmp_u))
@@ -593,14 +594,14 @@ class AttentionalOrdinalMixtureGCN(Layer): # Section 2.7 Weight sharing
     def _call(self, inputs):
         x_u = inputs[0]
         x_v = inputs[1]
-        '''
+        
         if self.sparse_inputs:
-            x_u = dropout_sparse(inputs[0], 1 - self.dropout, self.u_features_nonzero)
-            x_v = dropout_sparse(inputs[1], 1 - self.dropout, self.v_features_nonzero)
+            x_u = dropout_sparse(inputs[0], 1 - self.attn_drop, self.u_features_nonzero)
+            x_v = dropout_sparse(inputs[1], 1 - self.attn_drop, self.v_features_nonzero)
         else:
-            x_u = tf.nn.dropout(inputs[0], 1 - self.dropout)
-            x_v = tf.nn.dropout(inputs[1], 1 - self.dropout)
-        '''
+            x_u = tf.nn.dropout(inputs[0], 1 - self.attn_drop)
+            x_v = tf.nn.dropout(inputs[1], 1 - self.attn_drop)
+        
         supports_u = []
         supports_v = []
 
@@ -655,8 +656,8 @@ class AttentionalOrdinalMixtureGCN(Layer): # Section 2.7 Weight sharing
             attn_coef_v = tf.nn.softmax(attn_coef_v)
 
             # Apply dropout
-            tmp_u = tf.nn.dropout(tmp_u,rate=self.ffd_drop)
-            tmp_v = tf.nn.dropout(tmp_v,rate=self.ffd_drop)
+            #tmp_u = tf.nn.dropout(tmp_u,rate=self.ffd_drop)
+            #tmp_v = tf.nn.dropout(tmp_v,rate=self.ffd_drop)
             attn_coef_u = tf.nn.dropout(attn_coef_u,rate=self.attn_drop)
             attn_coef_v = tf.nn.dropout(attn_coef_v,rate=self.attn_drop)
             # then multiply with rating matrices
